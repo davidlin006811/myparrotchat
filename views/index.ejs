@@ -1,0 +1,115 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <% include partials/head.ejs %>
+   
+    <link rel="stylesheet" href="../css/style.css">
+    <title>User Sign In </title>
+</head>
+
+<body>
+    <div class="container">
+        <div class="banner-title">
+            <img src="img/parrot-m.svg" alt="logo">
+            <h1>Parrot Chat </h1>
+        </div>
+     
+        <div class="pop-window">
+            <div class="header">Account</div>
+            <div class="tips">
+                <% if (locals.success_msg.length > 0) { %>
+                    <div class="alert alert-success middle">
+                        <%= success_msg %>
+                    </div>
+                    <% } %>
+                        <% if (locals.error_msg.length > 0) { %>
+                            <div class="alert alert-danger middle">
+                                <%= error_msg %>
+                            </div>
+                            <% } %>
+                                <% if (locals.error.length > 0) { %>
+                                    <div class="alert alert-danger middle">
+                                        <%= error %>
+                                    </div>
+                                    <% } %>
+
+            </div>
+            <div class="login-form">
+                <form id="login" autocomplete="off" data-toggle="validator" role="form" name="login" action="/user/login" method="post">
+                    <div class="form-group">
+                        
+                        <input type="username" id = "userInput" class="form-control" name="username" placeholder="user name" data-error = "username cannot be empty" required>
+                        <div class="help-block with-errors"></div>
+                    </div>
+                    
+                    <div class="form-group">
+                        <input type="password" id = "passwordInput" class="form-control" name="password" placeholder="Password" data-minlength="6" required>
+                        <div class="help-block">Minimum of 6 characters</div>
+                    </div>
+                    
+                    <div class="form-group">
+                        <button type="submit" class="btn btn-primary btn-block">Sign in</button>
+                    </div>
+                    <div class="checkbox">
+                        <label>
+                             <input  type="checkbox" name = "remember_me"> Remember me 
+                        </label>
+                    </div>
+                </form>
+            </div>
+            <!--
+            <div class="socialmeida-login clearfix">
+                <ul class="socialmedia-list">
+                    <li>
+                        <a href="auth/twitter">
+                            <i class="fa fa-twitter fa-2x" aria-hidden="true"></i>
+                            <div class="tooltip"><span>Log in with Twitter</span></div>
+                        </a>
+                    </li>
+                    <li>
+                        <a href="auth/facebook">
+                            <i class="fa fa-facebook fa-2x" aria-hidden="true"></i>
+                            <div class="tooltip"><span>Log in with Facebook</span></div>
+                        </a>
+                    </li>
+                    <li>
+                        <a href="auth/github">
+                            <i class="fa fa-github fa-2x" aria-hidden="true"></i>
+                            <div class="tooltip"><span>Log in with github</span></div>
+                        </a>
+                    </li>
+                    <li>
+                        <a href="auth/google">
+                            <i class="fa fa-google-plus fa-2x" aria-hidden="true"></i>
+                            <div class="tooltip"><span>Log in with google mail</span></div>
+                        </a>
+                    </li>
+                    <li>
+                        <a href="auth/qq">
+                            <i class="fa fa-qq fa-2x" aria-hidden="true"></i>
+                            <div class="tooltip"><span>Log in with QQ</span></div>
+                        </a>
+                    </li>
+                    <li>
+                        <a href="auth/linkedin">
+                            <i class="fa fa-linkedin fa-2x" aria-hidden="true"></i>
+                            <div class="tooltip"><span>Log in with Linkedin</span></div>
+                        </a>
+                    </li>
+                </ul>
+            </div> -->
+            <div class="bottom-line">
+                <a href="/forget_password" class="forget-password">Forget Password</a>
+                <span class="seperate">|</span>
+                <a href="/register" class="sign-up">Sign Up</a>
+
+            </div>
+
+        </div>
+    </div>
+    <% include partials/js.ejs %>
+   
+</body>
+
+</html>

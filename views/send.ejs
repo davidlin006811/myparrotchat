@@ -1,0 +1,32 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <% include partials/head.ejs %>
+    <link rel="stylesheet" href="../css/style.css">
+    <title>Send Message</title>
+</head>
+<body>
+    <div class = "container">
+        <div class="banner-title">
+            <img src="img/parrot-m.svg" alt="logo">
+            <h1>Parrot Chat </h1>
+        </div>
+        <div class = "send">
+        <form action = "/user/verifymail" method = "post">
+            <div class = "form-group"><span>Dear <%= user.username %>,</span><br> We have send an email to your email address, please click the button to 
+            verify your email address and activate your account within 24 hours</div>
+            <div class = "form-group email">
+                <input type="hidden" name="email" value="<%= user.email %>">
+                
+            </div>
+            <div class="form-group">
+                 <button type="submit" class="btn btn-primary btn-block">Verify <span><%= user.email %></span></button>
+            </div>
+        </form>
+    </div>
+    
+    </div>
+    
+    <% include partials/js.ejs %>
+</body>
+</html>

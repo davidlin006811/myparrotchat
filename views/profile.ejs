@@ -1,0 +1,165 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+     <% include partials/head.ejs %>
+	 <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/croppie/2.4.1/croppie.css" />
+	<link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/stefangabos/Zebra_Dialog/dist/css/flat/zebra_dialog.min.css">
+	<link rel="stylesheet" href="../css/jquery.emojipicker.css">
+	<link rel="stylesheet"  href="../css/jquery.emojipicker.tw.css">
+	<link rel="stylesheet" href="../css/chat.css">
+    <title>Parrot Chat</title>
+</head>
+<body>
+<div class = "chat-container">
+    <div class = "chat-interface">
+        <div class = "display-bar">
+        	<div class = "avatar-icon">
+        	   	<a href="#" id="avatarUpload" ><img id = "personalAvatar" src="<%= user.profile.avatar %>" data-toggle="tooltip" data-placement="bottom" title="Edit profile avatar" class="chat-avatar-middle"/></a>
+        		<div class = "user-name"><h5><%= user.profile.first_name %> <%= user.profile.last_name %></h5></div>
+				<div class = "notification"><a id = "noteMsg" href="#" "fa-icon"  data-toggle="tooltip" data-placement="left" title="Notifications"><i class="fa fa-bell small" aria-hidden="true"></i></a></div>
+				<div id = "notificationCount" class = "notification-count"></div>
+			</div>
+			<div id = "contactDiv" class = "contact">
+				<div class = "search-form">
+					<form>
+						<div class = "input-group search-bar">
+							<span class = "fa fa-search"></span>
+							<input type="text" id="txtInput" class = "form-control" placeholder="Search for people" >
+						</div>
+						
+					</form>
+				</div>
+				<div class = "contact-list">
+					 <div class="dropdown">
+						<button class="btn btn-primary active dropdown-toggle droplist" type="button" data-toggle="dropdown">Contacts <tab1>All</tab1>
+						<span class="caret"></span></button>
+						<ul class="dropdown-menu drop-menu">
+							<li id = "All" ><a href="#" >All</a></li>
+							<li id = "family" ><a href="#"><i class="family"></i>Family</a></li>
+							<li id = "friend"><a href="#"><i class="friends"></i>Friends</a></li>
+							<li id = "classmate"><a href="#"><i class="classmates"></i>Classmates</a></li>
+							<li id = "colleague"><a href="#"><i class="colleagues"></i>Colleagues</a></li>
+							<li id = "bussiness"><a href="#"><i class="business"></i>Business</a></li>
+						</ul>
+					</div> 
+					<div class = "list-contacts">
+										
+					</div>
+					 <div id="contextMenu" class="dropdown clearfix">
+					 	<div class = "hide"></div>
+   						 <ul class="dropdown-menu" role="menu" aria-labelledby="dropdownMenu" style="display:block;position:static;margin-bottom:5px;">
+    					  	<li><a id="changeRelationship" href="#">Change Relationship</a></li>
+      						<li><a id="viewInfo" href="#">View Information</a></li>
+     						<li><a id="removeConnection" href="#">Remove Connection</a></li>
+     					 </ul>
+  					</div>
+				</div>
+			</div>
+			<div id = "groupDiv" class = "hide">
+				<div class = "group-search">
+					<form>
+						<div class = "input-group search-bar">
+							<span class = "fa fa-search"></span>
+							<input type="text" id="txtInput2" class = "form-control" placeholder="Search for group" >
+						</div>
+					</from>
+				</div>
+				<div class = "group-list">
+					<div class = "create-group"><a href = "#" data-toggle="tooltip" data-placement="bottom" title="create group"><img src = "../img/add_group.png"></a></div>
+					<div class = "remove-group"><a href = "#" data-toggle="tooltip" data-placement="bottom" title="remove group"><img src = "../img/remove_group.png"></a></div>
+					<div class = "invite-to-group"><a href = "#" data-toggle="tooltip" data-placement="bottom" title="invite sb to join your groups"><img src = "../img/user_add.png"></a></div>
+					<div class = "list-groups"></div>
+					<div id="contextMenu2" class="dropdown clearfix">
+					 	<div class = "hide"></div>
+   						 <ul class="dropdown-menu" role="menu" aria-labelledby="dropdownMenu" style="display:block;position:static;margin-bottom:5px;">
+    						<li><a id="viewInfoGroup" href="#">View Information</a></li>
+     						<li><a id="removeFromGroup" href="#" >Withdraw From Group</a></li>
+							 <li><a id="removeGroup" href="#">Remove Group</a></li>
+     					 </ul>
+  					</div>
+				</div>
+			</div>
+        	<div class = "menu-list">
+        		<ul>
+        			<li><a href="#" id = "user" class = "fa-icon" ><i class="fa fa-user small"></i></a></li>
+            	    <li><a href="#" id = "group" class = "fa-icon"  ><i class="fa fa-users small"></i></a></li>
+            	    <li ><a href="#" class = "fa-icon" id = "profile" ><i class="fa fa-wrench small" ></i></a></li>
+            	    <li ><a href="/user/logout" class = "fa-icon"><i class="fa fa-power-off small" ></i></a></li>
+        		</ul>
+        	</div>
+      
+		</div>
+		<div id ="chatWindow" class= "chat-window hide">
+			<div class="top-menu-bar">
+				<div class = "friend-bar">
+					<a href="#" id="friendProfile" data-toggle="tooltip" data-placement="top" title="Profile"><img class ="friend-img" ></a>
+					<span class = "typing"></span>
+					<div class = "friend-name"> <h5 id = "friendName"></h5></div>
+				</div>
+				<div class = "function-bar">
+					<div class = "snapshot"><a href="#"><i class="fa fa-camera" aria-hidden="true"></i></a>
+					</div>
+					<div class = "video"><a href="#"><i class="fa fa-video-camera" aria-hidden="true"></i></a>
+					</div>
+					<div class = "phone"><a href="#"><i class="fa fa-phone" aria-hidden="true"></i></a>
+					</div>
+					
+				</div>
+			</div>
+			<div id = "chatWrapper" class = "chat-wrapper clearfix">
+				<ul id="chatList" class = "chat-list">
+										
+				</ul>
+
+			</div>
+			<div class = "message-input">
+				<div class = "file-attachement"><a href="#" id= "fileAttachement"><i class="fa fa-paperclip" aria-hidden="true"></i></a></div>
+				<div class = "write-message">
+					<form>
+						 <textarea class=" emojiable-option form-control" rows="1"  id="message" placeholder="Type your message"></textarea>
+					</form>
+				</div>
+				<div class = "pic">
+				
+					<div class = "image-input">
+						<a href="#" id = "imageSelect">
+							<i class="fa fa-picture-o" aria-hidden="true"></i>
+						</a>
+					</div>
+				</div>
+				<div class = "send">
+					<a href="#" id="messageSend">
+						<i class="fa fa-paper-plane" aria-hidden="true"></i>
+					</a>
+				</div>
+			</div>
+		</div>
+	</div>
+	<canvas id="canvas"></canvas>
+	<audio class = "play-audio" autoplay="autoplay" style="display:none;" loop="false"></audio>
+</div>
+
+ <% include partials/js.ejs %>
+<script>
+	countryList = <%- JSON.stringify(country) %>;
+	account = <%- JSON.stringify(user) %>;
+	
+</script>
+<script>
+    $(document).ready(function () {
+        $('.dropdown-toggle').dropdown();
+    });
+	$(function () {
+  $('[data-toggle="tooltip"]').tooltip()
+})
+	
+</script>
+<script src="http://ajax.googleapis.com/ajax/libs/jqueryui/1.8.0/jquery-ui.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/croppie/2.4.1/croppie.min.js"></script>
+<script src="https://cdn.jsdelivr.net/gh/stefangabos/Zebra_Dialog/dist/zebra_dialog.min.js"></script>
+<script src="/socket.io/socket.io.js"></script>
+<script src="js/jquery.emojipicker.js"></script>
+<script src="js/jquery.emojis.js"></script>
+<script src="js/profile.js"></script>
+</body>
+</html>
