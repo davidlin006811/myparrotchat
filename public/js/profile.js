@@ -1982,7 +1982,7 @@ $('body').on('click', '.confirm-create-group .btn-success', function() {
 $('body').on('click', '.cancel-create-group .btn-danger', function() {
     $('.total').remove();
 });
-$('body').on('click', '.confirm-group-avatar .btn-success a', function() {
+$('body').on('click', '.confirm-group-avatar .btn-success', function() {
     var groupName = $('#groupName').html();
 
     basic.croppie('result', {
