@@ -90,12 +90,9 @@ $(document).ready(function() {
         if (videoChater === username) {
             deleteMedia();
         }
-        for (var i = 0; i < onlineFriends.lenght; i++) {
-            if (onlineFriends[i] === username) {
-                onlineFriends.splice(i, 1);
-                break;
-            }
-        }
+       var index = onlineFriends.indexOf(username);
+        if (index > -1) {
+            onlineFriends.splice(index, 1);
         var online = false;
         changeOnlineStatus(username, online);
         if (interlocutor === username) { //if the offline user is interlocutor, disable phone and video chat
