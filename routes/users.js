@@ -233,7 +233,7 @@ router.post('/sendFile', function(req, res) {
             minute = '0' + minute.toString();
 
         }
-        if (!groupName) {
+        if (receiver != groupName) {
             var newMessage = {
                 type: 'file',
                 sender: sender,
