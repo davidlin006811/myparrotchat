@@ -90,6 +90,7 @@ $(document).ready(function() {
         if (videoChater === username) {
             deleteMedia();
         }
+        //remove this user from online friends
        var index = onlineFriends.indexOf(username);
         if (index > -1) {
             onlineFriends.splice(index, 1);
