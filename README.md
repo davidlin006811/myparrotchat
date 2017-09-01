@@ -1,7 +1,8 @@
 ![capture3a](https://user-images.githubusercontent.com/22565449/29981355-6a983fca-8f1b-11e7-9994-d98625e55f92.PNG)
 ### A web chat 
 
-![download 1](https://user-images.githubusercontent.com/22565449/29978922-52c8dc24-8f11-11e7-854f-3721f3d9c88a.png)
+![download 2](https://user-images.githubusercontent.com/22565449/29981393-888fbe18-8f1b-11e7-8a53-32f50fbf91a0.png)
+
 ### A self-hosted chat app hosted by Sixian Lin
 
 ### Features
