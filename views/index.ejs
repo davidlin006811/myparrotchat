@@ -33,7 +33,6 @@
                                         <%= error %>
                                     </div>
                                     <% } %>
-
             </div>
             <div class="login-form">
                 <form id="login" autocomplete="off" data-toggle="validator" role="form" name="login" action="/user/login" method="post">
@@ -103,12 +102,13 @@
                 <a href="/forget_password" class="forget-password">Forget Password</a>
                 <span class="seperate">|</span>
                 <a href="/register" class="sign-up">Sign Up</a>
-
             </div>
-
         </div>
     </div>
-    <% include partials/js.ejs %>
+    <footer  class="footer">
+        <p>&copy; 2017 Sixian Lin  |  All Rights Reserved</p>
+    </footer>
+     <% include partials/js.ejs %>
    
 </body>
 
