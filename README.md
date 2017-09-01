@@ -21,5 +21,5 @@ A web chat
  - Add and remove user relationship freely 
  - Create group, remove group, join group, withdraw from group freely
  - One to one, one to multiple, multiple to one, and group chat
- 
+ - Floating EditText panel
   
