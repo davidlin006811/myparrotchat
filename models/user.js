@@ -195,12 +195,14 @@ module.exports.changePassword = function(id, old_password, new_password, callbac
 module.exports.addPotentialConnection = function(username, potentialFriend, callback) {
     User.getUserByUsername(username, function(err, user) {
         if (err) throw err;
-
-        if (typeof user.friends != 'undefined' && user.friends.length > 0) {
-            for (var i = 0; i < user.friends.length; i++) {
-                if (user.friends[i].username === potentialFriend.username) {
-                    return callback('be friend already')
-                }
+        for (var i = 0; i < user.friends.length; i++) {
+            if (user.friends[i].username === potentialFriend.username) {
+                return callback(null, 'be friend already');
+            }
+        }
+        for (var i = 0; i < user.potentialFriends.length; i++) {
+            if (user.potentialFriends[i].username === potentialFriend.username) {
+                return callback(null, 'repeat request');
             }
         }
         user.potentialFriends.push(potentialFriend);
@@ -228,16 +230,14 @@ module.exports.moveFromPotential = function(username, friendName, callback) {
     })
 };
 module.exports.removeFromPotential = function(username, friendName, callback) {
-    User.getUserByUsername(username, function(err, user) {
-        if (err) throw err;
-        if (!user) return callback('no user');
-        for (var x in user.potentialFriends) {
-            if (user.potentialFriends[x].username === friendName) {
-                user.potentialFriends.splice(x, 1);
-                user.save(callback);
-            }
-        }
-    })
+
+    User.update({ username: username }, { $pull: { potentialFriends: { username: friendName } } }, function() {
+        User.getUserByUsername(username, function(err, user) {
+            if (err) throw err;
+            callback(null, user);
+        })
+    });
+
 };
 module.exports.changeRelationship = function(username, friendName, friendClass, callback) {
     User.getUserByUsername(username, function(err, user) {
