@@ -38,11 +38,21 @@ var maximize = false;
 var snapImgOffset = 0;
 var useVideo = false;
 var useAudio = true;
+var scrolled = false;
+var toggleFloatInput = false;
+var newFileUploadAvailable = true;
 $(document).ready(function() {
     //socket = io.connect();
     $('#message').emojiPicker({
         position: 'top'
     });
+    $('#message2').emojiPicker({
+        width: '300px',
+        height: '200px',
+        position: 'right',
+        button: false
+    });
+
 
     //$('.snapshot').css('pointer-events', 'none');
     socket.emit('new user', user.username, function(data) {
@@ -90,10 +100,10 @@ $(document).ready(function() {
         if (videoChater === username) {
             deleteMedia();
         }
-        //remove this user from online friends
-       var index = onlineFriends.indexOf(username);
+        var index = onlineFriends.indexOf(username);
         if (index > -1) {
             onlineFriends.splice(index, 1);
+        }
         var online = false;
         changeOnlineStatus(username, online);
         if (interlocutor === username) { //if the offline user is interlocutor, disable phone and video chat
@@ -182,7 +192,9 @@ $(document).ready(function() {
         var uploadFileList = $('.file-upload-status').find('li');
         if (uploadFileList.length === sendFileQty) {
             $('.file-upload-status').remove();
-            $('#fileAttachement').css('pointer-events', 'auto');
+            if (toggleFloatInput) $('#fileAttachement2').css('pointer-events', 'auto')
+            else $('#fileAttachement').css('pointer-events', 'auto')
+            newFileUploadAvailable = true;
             sendFileQty = 0;
         }
     });
@@ -195,7 +207,9 @@ $(document).ready(function() {
         var uploadFileList = $('.file-upload-status').find('li');
         if (uploadFileList.length === sendFileQty) {
             $('.file-upload-status').remove();
-            $('#fileAttachement').css('pointer-events', 'auto');
+            if (toggleFloatInput) $('#fileAttachement2').css('pointer-events', 'auto');
+            else $('#fileAttachement').css('pointer-events', 'auto');
+            newFileUploadAvailable = true;
             sendFileQty = 0;
         }
     })
@@ -420,6 +434,11 @@ $(document).ready(function() {
         displayGroupInfo(group);
     });
     socket.on('invite joining group', function(message) {
+        //find if user has join this group, if yes return
+
+        for (var i = 0; i < groupList.length; i++) {
+            if (groupList[i].name === message.groupName) return;
+        }
         var person = getPersonalInfo(message.inviter);
         var inviterName = person.profile.first_name + ' ' + person.profile.last_name;
         var name = message.groupName.replace(/\"/g, "");
@@ -438,6 +457,9 @@ $(document).ready(function() {
         popupRequest.append(rejectDiv);
         $('body').append(popupRequest);
     });
+    socket.on('be a member already', function(group) {
+        popupOnlineNotice('You are already a member of ' + group);
+    })
     socket.on('disconnect media', function(message) {
         console.log('disconnect media');
         deleteMedia();
@@ -503,14 +525,27 @@ $(document).ready(function() {
         }
 
     });
-    $('#messageSend').on("click", sendMessage);
+    $('#messageSend').on("click", function(e) {
+        e.preventDefault();
+        var inputField = $('#message').val();
+        sendMessage(inputField);
+        $('#message').val('');
+    });
+    $('#messageSend2').on("click", function(e) {
+        e.preventDefault();
+        var inputField = $('#message2').val();
+        sendMessage(inputField);
+        $('#message2').val('');
+    });
     $('#noteMsg').on('click', showNote);
 
     $('#emoji a p').on('click', function(event) {
 
         $('#message').val($('#message').val() + $(event.target).text());
     });
-    $('#imageSelect').on('click', function() {
+    $('#imageSelect').on('click', function(e) {
+
+        e.preventDefault();
         if (interlocutor != null) {
             var online = checkIfUserOnline(interlocutor) //check if interlocutor is online
             if (online) selectImage()
@@ -523,7 +558,29 @@ $(document).ready(function() {
             selectImage();
         }
     });
-    $('#fileAttachement').on('click', attachFile);
+    $('#imageSelect2').on('click', function(e) {
+        e.preventDefault();
+        if (interlocutor != null) {
+            var online = checkIfUserOnline(interlocutor) //check if interlocutor is online
+            if (online) selectImage()
+            else $.Zebra_Dialog('This user is offline, please use file attachement to send image', {
+                type: 'error',
+                title: 'Send Image Error',
+                buttons: ['OK']
+            });
+        } else {
+            selectImage();
+        }
+    });
+
+    $('#fileAttachement').on('click', function(e) {
+        e.preventDefault();
+        attachFile();
+    });
+    $('#fileAttachement2').on('click', function(e) {
+        e.preventDefault();
+        attachFile();
+    });
     $('.video').on('click', function() {
         useVideo = true;
         startMediaChat();
@@ -547,7 +604,68 @@ $('.drop-menu li a').on('click', function(e) {
     $('.droplist tab1').html(filter);
     filterContacts(filter);
 });
+$('#chatWrapper').on('scroll', function() {
+    scrolled = true;
+});
+$('#message').on('contextmenu', function(e) {
+    if (!newFileUploadAvailable) return; //if files are uploading, do nothing
+    e.preventDefault();
+    $('#largeInputPanel').attr('class', 'large-input-panel');
+    $('#message').prop('disabled', true);
+    $('#imageSelect').css('pointer-events', 'none');
+    $('#fileAttachement').css('pointer-events', 'none');
+    $('#messageSend').css('pointer-events', 'none');
+    toggleFloatInput = true;
+});
 
+$('#emoji2').click(function(e) {
+    e.preventDefault();
+    $('#message2').emojiPicker('toggle');
+});
+
+$('.input-header').on('mousedown', function(e) {
+    $(this).css("cursor", "move"); //change mouse shape
+    var offset = $(this).offset(); //get the position of div 
+    var x = e.pageX - offset.left; //get the distance between mouse and the left of div
+    var y = e.pageY - offset.top; //get the distance between mouse and the top of div 
+    $(document).bind("mousemove", function(ev) { //bind the mouse move event
+
+        $(".large-input-panel").stop();
+        var _x = ev.pageX - x; //get the move offset value in x axis 
+        var _y = ev.pageY - y; //get the move offset value in y axis
+
+        $(".large-input-panel").animate({ left: _x + "px", top: _y + "px" }, 10);
+    });
+    $(document).mouseup(function() {
+        $(".large-input-panel").css("cursor", "default");
+        $(this).unbind("mousemove");
+    });
+});
+$('.input-header .fa-times').on('click', function() {
+    if (!newFileUploadAvailable) return; //if files are uploading, do nothing
+    $('#message').prop('disabled', false);
+    $('#imageSelect').css('pointer-events', 'auto');
+    $('#fileAttachement').css('pointer-events', 'auto');
+    $('#messageSend').css('pointer-events', 'auto');
+    $('#largeInputPanel').attr('class', 'hide');
+    toggleFloatInput = false;
+});
+$('.input-header .fa-times').on('mousemove', function() {
+    $(this).css("cursor", "pointer");
+    $(this).css("color", "yellow");
+});
+$('.input-header .fa-times').on('mouseleave', function() {
+    $(this).css("color", "white");
+});
+
+function updateScroll() {
+    scrolled = false;
+    if (!scrolled) {
+        var element = document.getElementById('chatWrapper');
+        console.log(element.scrollHeight);
+        element.scrollTop = element.scrollHeight - element.clientHeight;
+    }
+};
 
 function getOwnerGroups() {
     var ownerGroups = [];
@@ -661,12 +779,8 @@ function removeFriend(contacter, passive) {
     popupOnlineNotice(content);
     if (person === null) return;
     $('#' + contacter + 'Div').remove(); //remove contacter from contacter display list
-    for (var i = 0; i < userList; i++) {
-        if (userList[i].username === contacter) {
-            userList.splice(i, 1);
-            break;
-        }
-    }
+    var index = userList.indexOf(contacter);
+    userList.splice(index);
     if (interlocutor === contacter) {
         $('#chatWindow').attr('class', 'hide');
         interlocutor = null;
@@ -763,7 +877,7 @@ function popupSearch() {
     var searchDiv = $('<div class = "search-function-bar"></div>');
     var titleDiv = $('<div class = "search-title"><i class = "fa fa-times"></i></div>');
     searchDiv.append(titleDiv);
-    var formDiv = $('<form></form>');
+    var formDiv = $('<form action = ""></form>');
     searchDiv.append(formDiv);
     var inputDiv = $('<div class = "input-group search-content"></div>');
     formDiv.append(inputDiv);
@@ -1393,11 +1507,13 @@ function displaySendMessage(newMessage) {
         contentDiv.append(symbol);
     }
     chatItem.appendTo($('#chatList'));
-    $('#chatWrapper').scrollTop($('#chatList li').last().position().top + $('#chatList li').last().height());
+    // $('#chatWrapper').scrollTop($('#chatList li').last().position().top + $('#chatList li').last().height());
+    updateScroll();
 };
 
-function sendMessage() {
-    var newText = $('#message').val();
+function sendMessage(textField) {
+    //var newText = $('#message').val();
+    var newText = textField;
     if (!newText) return;
     var sendDate = new Date();
     var day = sendDate.getDate();
@@ -1425,11 +1541,8 @@ function sendMessage() {
         };
         // record this message to privateMessageList
         saveSendRecord(newMessage);
-
-        socket.emit('send message', newMessage, function() {
-            $('#message').val('');
-            displaySendMessage(newMessage);
-        });
+        socket.emit('send message', newMessage);
+        displaySendMessage(newMessage);
     } else {
         if (currentGroup != null) {
             var newMessage = {
@@ -1447,7 +1560,6 @@ function sendMessage() {
                 }
             };
             savePublicSendRecord(newMessage);
-            $('#message').val('');
             displaySendMessage(newMessage);
             socket.emit('send group message', newMessage);
         }
@@ -1520,8 +1632,8 @@ function displayReceiveMessage(message) {
         }
 
         $('#chatList').append(chatItem);
-        $('#chatWrapper').scrollTop($('#chatList li').last().position().top + $('#chatList li').last().height());
-
+        //$('#chatWrapper').scrollTop($('#chatList li').last().position().top + $('#chatList li').last().height());
+        updateScroll();
     }
 };
 
@@ -1606,7 +1718,8 @@ function displayReceiveMsg(message, sender) {
         }
 
         $('#chatList').append(chatItem);
-        $('#chatWrapper').scrollTop($('#chatList li').last().position().top + $('#chatList li').last().height());
+        //$('#chatWrapper').scrollTop($('#chatList li').last().position().top + $('#chatList li').last().height());
+        updateScroll();
 
     }
 };
@@ -1666,7 +1779,7 @@ function attachFile() {
     var formDiv = $('<div class = "file-Div"></div>');
     fileUploadWindow.append(formDiv);
     var fileForm = $('<form autocomplete="off" data-toggle="validator" role="form"  id = "myFile" name="myFile" enctype="multipart/form-data" action="user/sendFile" method="post" multiple></form>');
-    var fileAttachementField = $('<div class="form-group row"><div class = "col-sm-10"><input type = "file" id = "myFiles" class="form-control-file" name = "myFiles" multiple aria-describedby="fileHelp" required><small id="fileHelp" class="form-text text-muted">Please upload your avatar file</small></div></div>');
+    var fileAttachementField = $('<div class="form-group row"><div class = "col-sm-10"><input type = "file" id = "myFiles" class="form-control-file" name = "myFiles" multiple aria-describedby="fileHelp" required><small id="fileHelp" class="form-text text-muted">Please upload your file</small></div></div>');
     var submitBtn = $(' <div class="form-group row"><div class = "col-sm-5" style="margin-left:200px"><button id="submitFiles" type="button" class="btn btn-primary btn-block">send</button></div></div>');
     fileForm.append(fileAttachementField);
     fileForm.append(submitBtn);
@@ -1880,14 +1993,17 @@ function invitePeople(invitee, inviteeName) {
             day: day
         }
     };
-
-
     socket.emit('invite people', message, function(feedback) {
         if (feedback === "be friend already") {
             $.Zebra_Dialog(inviteeName + ' is your friend already. Request is rejected', {
                 type: 'error',
                 title: 'Invite People Error',
                 buttons: [{ caption: 'OK' }]
+            })
+        } else if (feedback === 'repeat request') {
+            $.Zebra_Dialog('repeat request', {
+                type: 'error',
+                title: 'Invite People Error'
             })
         } else {
             popupOnlineNotice(feedback);
@@ -1982,7 +2098,6 @@ $('body').on('click', '.cancel-create-group .btn-danger', function() {
 });
 $('body').on('click', '.confirm-group-avatar .btn-success', function() {
     var groupName = $('#groupName').html();
-
     basic.croppie('result', {
         type: 'canvas',
         size: 'viewport'
@@ -2009,7 +2124,8 @@ $('body').on('click', '.cancel-group-avatar .btn-danger a', function() {
 });*/
 
 /* remove group events */
-$('body').on('click', '.remove-group-confirm .btn-danger', function() {
+$('body').on('click', '.remove-group-confirm .btn-danger', function(e) {
+    e.preventDefault();
     var targetGroup = $('input[name = "group"]:checked').attr('id').replace(/\"/g, "");
     var info = {
         owner: user.username,
@@ -2182,7 +2298,8 @@ $('body').on('click', '.member-list-invite button', function() {
 $('body').on('click', '.groups-close .fa-times', function() {
     $('.total').remove();
 });
-$('body').on('click', '.next button', function() {
+$('body').on('click', '.next button', function(e) {
+    e.preventDefault();
     var targetGroup = $('input[name = "group"]:checked').attr('id').replace(/\"/g, "");
     var groupInfo = getGroupInfo(targetGroup);
     $('.groups').remove();
@@ -2305,10 +2422,11 @@ $('#removeFromGroup').on('click', function() {
     var name = groupName.replace(/\s/g, '');
     var divs = $('#' + name + 'Div');
     divs.remove();
-    for (var i = 0; i < groupList.length; i++) {
-        if (groupList[i].name === groupName) {
-            groupList.splice(i, 1);
-        }
+    var index = groupList.indexOf(groupName);
+    groupList.splice(index, 1);
+    if (currentGroup === groupName) {
+        $('#chatWindow').attr('class', 'hide');
+        currentGroup = null;
     }
 
     popupOnlineNotice('You are withdrawn from group ' + groupName);
@@ -2329,6 +2447,10 @@ $('#removeGroup').on('click', function() {
                         groupName: groupName
                     };
                     socket.emit('remove group', info);
+                    if (currentGroup === groupName) {
+                        $('#chatWindow').attr('class', 'hide');
+                        currentGroup = null;
+                    }
                 }
             }
         }
@@ -2366,11 +2488,8 @@ $("body").on('click', '#submitImage', function(e) {
             }
         };
         saveSendRecord(newMessage);
-        socket.emit('send message', newMessage, function(finish) {
-            if (finish) {
-                displaySendMessage(newMessage);
-            }
-        })
+        socket.emit('send message', newMessage);
+        displaySendMessage(newMessage);
     } else {
         if (currentGroup != null) {
             var newMessage = {
@@ -2433,7 +2552,8 @@ $('body').on('click', '#rejectRequest', function(e) {
 $('body').on('click', '.search-title .fa-times', function() {
     $('.total').remove();
 });
-$('body').on('click', '#searchFriend', function() {
+$('body').on('click', '#searchFriend', function(e) {
+    e.preventDefault();
     var target = $('#people').val();
     if (target === user.username) return;
     else {
@@ -2490,7 +2610,8 @@ $('body').on('click', '#searchFriend', function() {
     }
 
 });
-$('body').on('click', '#invitePeople', function() {
+$('body').on('click', '#invitePeople', function(e) {
+    e.preventDefault();
     var inviteeName = $('.peopel-name').html();
     var invitee = $('.target-div').html();
     $('.total').remove();
@@ -2775,6 +2896,7 @@ $('body').on('contextmenu', '.contacts-info a', function(e) {
 $('html').click(function() {
     $('#contextMenu').hide();
     $('#contextMenu2').hide();
+    $('#contextMenuInput').hide();
 });
 
 $('#changeRelationship').on('click', function() {
@@ -2815,7 +2937,8 @@ $('body').on('click', '.relation-title-div .fa-times', function() {
 $('body').on('click', '.profile-button button', function() {
     $('.total').remove();
 })
-$('body').on('click', '.confirm-relation button', function() {
+$('body').on('click', '.confirm-relation button', function(e) {
+    e.preventDefault();
     var target = $('.select-relation .hide').html();
     var relationship = $('input[name = "relationship"]:checked').val();
 
@@ -2881,7 +3004,8 @@ $('body').on('click', '.confirm-contact-remove', function() {
     $('.total').remove();
 });
 /* update profile avatar */
-$("body").on('click', '#send', function() {
+$("body").on('click', '#send', function(e) {
+    e.preventDefault();
     basic.croppie('result', {
         type: 'canvas',
         size: 'viewport'
@@ -2967,15 +3091,17 @@ $('body').on('click', '.file-link', function() {
 /*  file attachement events */
 
 //when clicking the submit button on file attachement form
-$("body").on('click', '#submitFiles', function() {
+$("body").on('click', '#submitFiles', function(e) {
+    e.preventDefault();
     var receiver = interlocutor != null ? interlocutor : currentGroup;
     var files = $('#myFiles').prop('files');
 
     //remove file attachement form
     $('.total').remove();
-
+    newFileUploadAvailable = false;
     //disable file attachement button when filea are uploading to server
-    $('#fileAttachement').css('pointer-events', 'none');
+    if (toggleFloatInput) $('#fileAttachement2').css('pointer-events', 'none');
+    else $('#fileAttachement').css('pointer-events', 'none');
 
     //create a div to display file upload progress status
     var progressUploadDiv = $('<div class = "file-upload-status"><h5></h5><ul class = "file-upload-list"></ul></div>');
@@ -3006,6 +3132,7 @@ $("body").on('click', '#submitFiles', function() {
         var progressId = receiver + i;
         var data = new FormData();
         data.append('sender', user.username);
+        data.append('senderName', user.profile.first_name + ' ' + user.profile.last_name);
         data.append('groupName', currentGroup);
         data.append('receiver', receiver);
         data.append('progressId', progressId);
