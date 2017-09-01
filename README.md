@@ -14,10 +14,10 @@
  - Text, emoji and photo submit
  - File upload / download
  - Peer to peer video and audio chat
- - Take snapshot in video chat
+ - Snapshot takeing in video chat
  - Multiple groups
  - Easy user and group search
- - Add and remove user relationship freely 
- - Create group, remove group, join group, withdraw from group freely
- - One to one, one to multiple, multiple to one, and group chat
- - Floating EditText panel
+ - Free contacter adding and removing 
+ - An easy way to create group, remove group, join group, withdraw from group freely 
+ - One to one private chat and one to mutilple group chat
+ - A simple way to toggle between deafult input panel and floating input panel
