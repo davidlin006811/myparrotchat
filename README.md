@@ -1,2 +1,3 @@
 # myparrotchat
-A chat application using html, css and javascript ...
+A web chat application
+
