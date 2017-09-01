@@ -20,6 +20,10 @@ a {
     font-family: 'Roboto', sans-serif;
 }
 
+footer p {
+   font: normal 1.618rem 'Roboto', sans-serif;
+}
+
 .container {
     min-height: 500px;
     width: 100%;
@@ -376,7 +380,6 @@ input[type='radio']:checked:before {
     margin-bottom: 40px;
 }
 
-
 /* resetpassword ejs*/
 
 .success-info,
@@ -387,4 +390,11 @@ input[type='radio']:checked:before {
     margin-top: 80px;
     padding: 20px;
     position: absolute;
+}
+/* footer */
+.footer {
+    width: 100%;
+    margin-top: 150px;
+    text-align: center;
+    display: inline-block;
 }
