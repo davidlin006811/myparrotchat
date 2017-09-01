@@ -1,7 +1,7 @@
 # myparrotchat
 ![capture3a](https://user-images.githubusercontent.com/22565449/29981355-6a983fca-8f1b-11e7-9994-d98625e55f92.PNG)
 ### A web chat 
-#### Website: https://wwww.myparrotvhat.com 
+#### Website: https://wwww.myparrotchat.com 
 ![download 2](https://user-images.githubusercontent.com/22565449/29981393-888fbe18-8f1b-11e7-8a53-32f50fbf91a0.png)
 
 ### A self-hosted chat app hosted by Sixian Lin
