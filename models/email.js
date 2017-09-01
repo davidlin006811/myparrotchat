@@ -60,9 +60,9 @@ module.exports.sendEmail = function(email_address, subject, content, url, res) {
         auth: {
             type: 'OAuth2',
             user: 'davidlin006811@@gmail.com',
-            clientId: '755175043144-2d0k6os5gqiargohl9c6i5th3m38dplu.apps.googleusercontent.com',
-            clientSecret: 'kAGDuO-sG1lblAEZLXK6aZHF',
-            refreshToken: '1/AVIv9pXT27jWXw1JCsUe16U0oUPoSIMM9R_J1sA0dlQ'
+            clientId: 'Your mailbox client ID',
+            clientSecret: 'xxxxxx-xxxxxxxxxxxxxxxxx',
+            refreshToken: 'x/xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx_xxxxxxxx'
         },
     });
 
