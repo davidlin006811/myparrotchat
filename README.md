@@ -5,3 +5,4 @@ A web chat
 
 ![download](https://user-images.githubusercontent.com/22565449/29977060-19fdd766-8f0a-11e7-94b9-5cdff1ea1d65.png)
 
+A self-hosted chat app hosted by Sixian Lin
