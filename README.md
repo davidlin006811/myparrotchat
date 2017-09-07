@@ -7,8 +7,9 @@
 
 ### Features
  - Private and password-protected users
- - Account register, account activation by email, user authentication and shadow password
- - Offline messages 
+ - Account activation by email, account register, user authentication and shadow password
+ - Remember me / reset password by email
+ - Offline messages / chat History
  - New message alerts / notifications
  - Text, emoji and photo submit
  - File upload / download
