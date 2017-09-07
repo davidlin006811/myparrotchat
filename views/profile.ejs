@@ -9,7 +9,7 @@
 	<link rel="stylesheet" href="../css/chat.css">
     <title>Parrot Chat</title>
 </head>
-<body>
+<body oncontextmenu="return false;">
 <div class = "chat-container">
     <div class = "chat-interface">
         <div class = "display-bar">
@@ -81,10 +81,10 @@
 			</div>
         	<div class = "menu-list">
         		<ul>
-        			<li><a href="#" id = "user" class = "fa-icon" ><i class="fa fa-user small"></i></a></li>
-            	    <li><a href="#" id = "group" class = "fa-icon"  ><i class="fa fa-users small"></i></a></li>
-            	    <li ><a href="#" class = "fa-icon" id = "profile" ><i class="fa fa-wrench small" ></i></a></li>
-            	    <li ><a href="/user/logout" class = "fa-icon"><i class="fa fa-power-off small" ></i></a></li>
+        			<li><a href="#" id = "user" data-toggle="tooltip" data-placement="bottom" title="User"   class = "fa-icon" ><i class="fa fa-user small"></i></a></li>
+            	    <li><a href="#" id = "group" data-toggle="tooltip" data-placement="bottom" title="Group"  class = "fa-icon"  ><i class="fa fa-users small"></i></a></li>
+            	    <li ><a href="#" class = "fa-icon" id = "profile" data-toggle="tooltip" data-placement="bottom" title="Profile" ><i class="fa fa-wrench small" ></i></a></li>
+            	    <li ><a href="/user/logout" data-toggle="tooltip" data-placement="bottom" title="Logout"  class = "fa-icon"><i class="fa fa-power-off small" ></i></a></li>
         		</ul>
         	</div>
       
@@ -92,16 +92,17 @@
 		<div id ="chatWindow" class= "chat-window hide">
 			<div class="top-menu-bar">
 				<div class = "friend-bar">
-					<a href="#" id="friendProfile" data-toggle="tooltip" data-placement="top" title="Profile"><img class ="friend-img" ></a>
+					<a href="#" id="friendProfile"><img class ="friend-img" ></a>
 					<span class = "typing"></span>
 					<div class = "friend-name"> <h5 id = "friendName"></h5></div>
 				</div>
 				<div class = "function-bar">
-					<div class = "snapshot"><a href="#"><i class="fa fa-camera" aria-hidden="true"></i></a>
+					<div class = "history"><a href="#" data-toggle="tooltip" data-placement="bottom" title="History" ><i class="fa fa-history" aria-hidden="true"></i></a></div>
+					<div class = "snapshot"><a href="#" data-toggle="tooltip" data-placement="bottom" title="Snaphot" ><i class="fa fa-camera" aria-hidden="true"></i></a>
 					</div>
-					<div class = "video"><a href="#"><i class="fa fa-video-camera" aria-hidden="true"></i></a>
+					<div class = "video"><a href="#" data-toggle="tooltip" data-placement="bottom" title="Video" ><i class="fa fa-video-camera" aria-hidden="true"></i></a>
 					</div>
-					<div class = "phone"><a href="#"><i class="fa fa-phone" aria-hidden="true"></i></a>
+					<div class = "phone"><a href="#" data-toggle="tooltip" data-placement="bottom" title="Audio" ><i class="fa fa-phone" aria-hidden="true"></i></a>
 					</div>
 					
 				</div>
@@ -114,11 +115,11 @@
 			</div>
 			<div class = "message-input">
 				<div class = "file-attachement"><a href="#" id= "fileAttachement"><i class="fa fa-paperclip" aria-hidden="true"></i></a></div>
-				<div class = " emojiPickerIconWrap write-message">
-		  			 <textarea class=" emojiable-option form-control" rows="1"  id="message" placeholder="Type your message"></textarea>
+				<div class = "write-message">
+		  			 <textarea rows="1"  id="message" placeholder="Type your message"></textarea>
 				</div>
+				 <button id = "emoji1"><i class="fa fa-smile-o" aria-hidden="true"></i></button> 
 				<div class = "pic">
-				
 					<div class = "image-input">
 						<a href="#" id = "imageSelect">
 							<i class="fa fa-picture-o" aria-hidden="true"></i>
@@ -135,14 +136,30 @@
 	</div>
 	<div id = "largeInputPanel" class = "large-input-panel hide">
 			<div class = "input-header"><i class = "fa fa-times"></i></div>
-			<div class = "large-write-message">
-				 <textarea id="message2" rows = "5" class="large-input-field" placeholder="Type your message"></textarea>
+			<div id = 'textarea' class = "large-write-message" contenteditable="true">
+			
 			</div>
 			<div class = "tools">
 				<button id = 'fileAttachement2' class = "btn btn-info"><i class="fa fa-paperclip"></i></button>
 				<button id = 'imageSelect2'><img src = "../img/artwork.png"></button>
 				<button id = "emoji2"><img src = "../img/Emoji.png" /></button>
 				<button id = "messageSend2" class = "btn btn-success"><i class = "fa fa-paper-plane"></i></button>
+			</div>
+	</div>
+	<div id = "chatHistory" class = "chat-history">
+		<div class = "chat-history-bar">			
+		</div>
+		<div class = "history-chatter"></div>
+		<div id = "chatListDiv" class = "chat-history-list"><ul id = "historyList"></ul></div>
+		<div class = "chat-history-tool">
+			<div class = "history-power-off">
+				<i class="fa fa-power-off"></i>
+			</div>
+			<div class = "history-next">
+				<i class="fa fa-file-text-o"></i>
+			</div>
+			<div class = "history-load">
+				<i class="fa fa-plus"></i></div>
 			</div>
 	</div>
 	<canvas id="canvas"></canvas>
@@ -155,17 +172,7 @@
 	account = <%- JSON.stringify(user) %>;
 	
 </script>
-<script>
-   /*$(document).ready(function () {
-        $('.dropdown-toggle').dropdown();
-    });
-	$(function () {
-  $('[data-toggle="tooltip"]').tooltip()
-})*/
-	
-</script>
-<!--<script src="http://ajax.googleapis.com/ajax/libs/jqueryui/1.8.0/jquery-ui.min.js"></script>-->
-<script src = "js/jquery-3.2.1.min.js"></script>
+
 <script src="https://cdnjs.cloudflare.com/ajax/libs/croppie/2.4.1/croppie.min.js"></script>
 <script src="https://cdn.jsdelivr.net/gh/stefangabos/Zebra_Dialog/dist/zebra_dialog.min.js"></script>
 <script src="/socket.io/socket.io.js"></script>
