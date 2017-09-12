@@ -11,8 +11,9 @@ var members = null;
 var unknownMemberList = [] //define the information of unknown members
 var privateMessageList = []; //define the messages send/receive from private
 var publicMessageList = []; //define the messages send/recevie from group
-var currentSaveId = {}; //store the current save id for each contact
-var currentGroupSaveId = {} //store the current save id for each group
+var currentHistoryId = {}; // record the reading history id for each user
+var currentSaveId = {}; //define the current save position for each user
+var displayCacheData = [];
 var notificationList = [];
 var count = 0; //define the qty of pending message(current user hasn't read yet)
 var change = false; //define if an image size has been changed(enlarged or reduced)
@@ -49,6 +50,8 @@ var savePublicDataToLocal = false;
 var mousedown = false;
 var currentReadId = null;
 var oldHistoryDate = null;
+var currentDate = null;
+var historyEnd = false;
 $(document).ready(function() {
     //socket = io.connect();
     $('#message').emojiPicker({
@@ -240,9 +243,11 @@ $(document).ready(function() {
     socket.on('request media chat', function(message) {
         var senderUsername = message.sender;
         useVideo = message.useVideo;
-
         var sender = getPersonalInfo(senderUsername);
         var requestVideoChat = $('<div class = "request-media-chat"></div>');
+        var chaterDiv = $('<div id = "chater" class = "hide"></div>');
+        chaterDiv.html(message.sender);
+        requestVideoChat.append(chaterDiv);
         var info = $('<h4></h4>');
         if (useVideo) info.html(sender.profile.first_name + ' ' + sender.profile.last_name + ' sent a video chat request to you');
         else info.html(sender.profile.first_name + ' ' + sender.profile.last_name + ' sent an audio chat request to you');
@@ -251,9 +256,6 @@ $(document).ready(function() {
         rejectBtn = $('<button id = "decline">Decline</button>');
         requestVideoChat.append(acceptBtn);
         requestVideoChat.append(rejectBtn);
-        var chaterDiv = $('<div id = "chater" class = "hide"></div>');
-        chaterDiv.html(message.sender);
-        requestVideoChat.append(chaterDiv);
         requestVideoChat.appendTo('body');
         playSound('sound/your-turn.mp3');
 
@@ -315,7 +317,6 @@ $(document).ready(function() {
                 console.log('ice finish');
             }
         }
-
         myConnection.onaddstream = function(event) {
             var remoteMedia;
             var remoteMediaDiv = $('<div class="remote-media"></div>');
@@ -364,7 +365,6 @@ $(document).ready(function() {
                 },
                 onError, mediaConstraints);
         }
-
     });
     socket.on('offer', function(message) {
 
@@ -445,7 +445,6 @@ $(document).ready(function() {
         //check if this group is new or not
         for (var i = 0; i < groupList.length; i++) {
             if (groupList[i].name === group.name) {
-                console.log(groupList[i].name)
                 groupList[i].avatar = group.avatar;
                 isNewGroup = false;
                 break;
@@ -656,6 +655,7 @@ $(document).ready(function() {
     $('#message').on('contextmenu', function(e) {
         if (!newFileUploadAvailable) return; //if files are uploading, do nothing
         e.preventDefault();
+        $('#textarea').empty();
         $('#largeInputPanel').attr('class', 'large-input-panel');
         $('#message').prop('disabled', true);
         $('#emoji1').css('pointer-events', 'none');
@@ -711,6 +711,1297 @@ $(document).ready(function() {
     });
 
 
+    /* context menu on message*/
+
+    $('body').on('click', '#liLink', function(e) {
+        e.preventDefault();
+        var url = $(this).attr('href');
+        window.open(url, "_blank");
+        $(this).parent().remove();
+    });
+    $('body').on('contextmenu', '.chat-list li img', function(e) {
+        e.preventDefault();
+
+        var link = $(this).attr('src');
+        var contextmenu = $('<div id = "liContext"></div>');
+        var linkElement = $('<a id = "liLink" >Open</a>');
+        contextmenu.append(linkElement);
+        linkElement.attr('href', link);
+        $(this).parent().append(contextmenu);
+        $('#liContext').css({
+            display: "block",
+            position: 'fixed',
+            left: e.pageX,
+            top: e.pageY
+        });
+    });
+
+    /* Highlight text right click function */
+    var selectedText = null;
+    $('body').on('contextmenu', '.chat-content', function(e) {
+        e.preventDefault();
+        if ($('#liContextMenu') != null) $('#liContextMenu').remove();
+        var linkElement = null;
+        var contextDiv = null;
+        selectedText = window.getSelection().toString();
+        if (e.target.tagName.toLowerCase() === 'a') {
+            var link = $(e.target).attr('href');
+            linkElement = $('<a  id = "liLink" class = "open-link">Open</a>');
+            linkElement.attr('href', link);
+        }
+        if (selectedText.length === 0) {
+            if (linkElement != null) {
+                contextDiv = $('<div id = "liContextMenu" class = "li-contextmenu"></div>');
+                contextDiv.append(linkElement);
+            } else return;
+        } else {
+            contextDiv = $('<div id = "liContextMenu" class = "li-contextmenu"><a  href= "#" class = "text-copy">Copy</a><a href = "#" class = "text-search">Search</a></div>');
+            if (linkElement != null) contextDiv.append(linkElement);
+        }
+        $(e.target).parent().append(contextDiv);
+        $('#liContextMenu').css({
+            position: 'fixed',
+            display: "block",
+            top: e.pageY,
+            left: e.pageX
+        });
+
+    });
+    $('body').on('mousemove', '.li-contextmenu', function() {
+        $('.arrowup').css('border-bottom-color', '#666');
+    });
+    $('body').on('mouseleave', '.li-contextmenu', function() {
+        $('.arrowup').css('border-bottom-color', '#222');
+    })
+    $('#chatWrapper').on('click', '.text-copy', function(e) {
+        e.preventDefault();
+        var copied;
+        if (selectedText != null) {
+            try {
+                // Copy the text
+                copied = document.execCommand('copy');
+
+            } catch (ex) {
+                copied = false;
+            }
+            if (copied) selectedText = null;
+            copied = false;
+        }
+        $('.li-contextmenu').remove();
+    });
+    $('#chatWrapper').on('click', '.text-search', function(e) {
+            e.preventDefault;
+            if (selectedText != null) {
+                window.open('https://www.google.ca/search?q=' + selectedText);
+            }
+        })
+        //remove liContextMenu menu if clicking any other element but liContextMenu 
+    $(document).on('click', 'body', function(e) {
+        if (e.target.id != 'liContextMenu' && selectedText != null) {
+            $('.li-contextmenu').remove();
+            selectedText = null;
+        }
+        if (e.target.id != '#textarea') {
+            if ($('#inputContextMenu') != null) $('#inputContextMenu').remove();
+        }
+    });
+
+    /* group list left click event */
+
+    $('body').on('click', '.group-info a', function() {
+
+        currentGroup = $(this).attr('id');
+        interlocutor = null;
+        displayPublicChatWindow();
+    });
+    $('body').on('click', '.group-info .group-img', function(e) {
+        e.preventDefault();
+        var groupName = $(this).siblings().find('.full-name').find('a').html();
+        currentGroup = groupName;
+        interlocutor = null;
+        displayPublicChatWindow(currentGroup)
+    });
+    $('body').on('click', '.group-info .full-name', function(e) {
+        e.preventDefault();
+        currentGroup = $(this).find('a').attr('id');
+        interlocutor = null;
+        displayPublicChatWindow();
+    });
+    $('body').on('click', '.group-info .contact-name', function(e) {
+        e.preventDefault();
+        currentGroup = $(this).find('a').attr('id');
+        interlocutor = null;
+        displayPublicChatWindow();
+    });
+    $('body').on('click', '.group-info .latest-message', function(e) {
+        e.preventDefault();
+        currentGroup = $(this).parent().find('a').attr('id');
+        interlocutor = null;
+        displayPublicChatWindow();
+    });
+    /* create group events */
+    $('body').on('click', '.confirm-create-group .btn-success', function() {
+        var newGroupName = $('#groupName').val();
+        $('#error-message').attr('class', 'hide');
+        var info = {
+            owner: user.username,
+            groupName: newGroupName
+        }
+        $('.total').remove();
+        socket.emit('new group', info, function(result) {
+            if (result != 'success') {
+                $.Zebra_Dialog('This group already exists', {
+                    type: 'error',
+                    title: 'Group Create Error'
+                })
+            } else {
+                selectGroupAvatar(newGroupName);
+            }
+        })
+    });
+    $('body').on('click', '.cancel-create-group .btn-danger', function() {
+        $('.total').remove();
+    });
+    //upload group avatar
+    $('body').on('click', '.confirm-group-avatar .btn-success', function() {
+        var groupName = $('#groupName').html();
+        basic.croppie('result', {
+            type: 'canvas',
+            size: 'viewport'
+        }).then(function(data) {
+            if (!$('#groupAvatar').val()) {
+                $('#error-message').html('You did not select a file');
+                $('#error-message').attr('class', 'error-message');
+                return;
+            }
+            var message = {
+                sender: user.username,
+                groupName: groupName,
+                avatar: data
+            }
+            $('.total').remove();
+            socket.emit('update group avatar', message);
+
+        });
+
+    });
+    $('body').on('contextmenu', '.group-info .group-img', function(e) {
+        e.preventDefault();
+        var groupName = $(this).siblings().find('.full-name').find('a').html();
+        var group = getGroupInfo(groupName);
+        if (group.owner === user.username) {
+            selectGroupAvatar(groupName);
+        }
+    })
+
+    $('body').on('click', '.cancel-group-avatar .btn-danger a', function(e) {
+        e.preventDefault();
+        var groupName = $('#groupName').html();
+        var isNewGroup = true;
+        for (var i = 0; i < groupList.length; i++) {
+            if (groupList[i].name === groupName) {
+                isNewGroup = false;
+                break;
+            }
+        }
+        if (isNewGroup) {
+            var info = {
+                sender: user.username,
+                groupName: groupName
+            }
+            socket.emit('new group without avatar', info);
+        }
+        $('.total').remove();
+    });
+
+    /* remove group events */
+    $('body').on('click', '.remove-group-confirm .btn-danger', function(e) {
+        e.preventDefault();
+        var targetGroup = $('input[name = "group"]:checked').attr('id').replace(/\"/g, "");
+        var info = {
+            owner: user.username,
+            groupName: targetGroup
+        };
+        socket.emit('remove group', info);
+        $('.total').remove();
+
+    });
+
+
+    /* search group events */
+
+    $('body').on('keyup', '#groupInput', function(e) {
+        e.preventDefault();
+        var input = $(this).val().toUpperCase();
+        if (!input.length) {
+            $("#listResult").empty();
+            return;
+        } else {
+            $("#listResult").empty();
+            var query = {
+                sender: user.username,
+                name: input
+            }
+
+            socket.emit('search group', query, function(data) {
+
+                for (var i = 0; i < data.length; i++) {
+                    $("#listResult").append('<li>' + data[i] + '</li>');
+
+                }
+            });
+        }
+    });
+    $('body').on('click', '#listResult li', function() {
+        $('#groupInput').val($(this).text());
+    });
+    $('body').on('click', '#searchGroup', function(e) {
+        e.preventDefault();
+        var input = $('#groupInput').val();
+        var info = {
+            name: input,
+            username: user.username
+        };
+        if (!input.length) return;
+        $('.total').remove();
+        socket.emit('get group info', info);
+
+    });
+    $('body').on('click', '.member-count a', function(e) {
+        var groupName = $('.group-name-info').html();
+
+        var groupMembers = [];
+        var unknownMembers = [];
+        for (var i = 0; i < searchGroupResult.members.length; i++) {
+            groupMembers.push(searchGroupResult.members[i]);
+            unknownMembers.push(searchGroupResult.members[i]);
+        }
+
+        var groupMembersList = $('<div class = "group-members-list"></div>');
+        var close = $('<div class = "groups-members-close"><i id = "closeGroupInfo" class = "fa fa-times"></i></div>');
+        groupMembersList.append(close);
+
+        var groupNameDiv = $('<div class = "group-member-groupName"></div>');
+        groupNameDiv.html(groupName);
+        groupMembersList.append(groupNameDiv);
+        var membersDiv = $('<div class = "members-list"></div>');
+        groupMembersList.append(membersDiv);
+        $('.total').append(groupMembersList);
+
+        var knownMembersInfo = [];
+        var knownMembers = [];
+
+
+        for (var i = 0; i < groupMembers.length; i++) {
+            if (groupMembers[i] === user.username) {
+                var index = i;
+                unknownMembers.splice(index, 1);
+                var personInfo = {
+                    username: user.username,
+                    name: user.profile.first_name + ' ' + user.profile.last_name,
+                    avatar: user.profile.avatar,
+                    relationship: 'Me',
+                    online: true
+                }
+                knownMembersInfo.push(personInfo);
+                break;
+            }
+        }
+        //get known members 
+        for (var i = 0; i < groupMembers.length; i++) {
+            for (var j = 0; j < userList.length; j++) {
+                if (groupMembers[i] === userList[j].username) {
+                    knownMembers.push(groupMembers[i]);
+                }
+            }
+        }
+
+        // get unknown members
+        for (var i = 0; i < knownMembers.length; i++) {
+            for (var j = 0; j < unknownMembers.length; j++) {
+                if (knownMembers[i] === unknownMembers[j]) {
+                    unknownMembers.splice(j, 1);
+                    break;
+                }
+            }
+        }
+        //get known members information
+        for (let i = 0; i < knownMembers.length; i++) {
+            var person = getPersonalInfo(knownMembers[i]);
+            var personInfo = {
+                username: person.username,
+                name: person.profile.first_name + ' ' + person.profile.last_name,
+                avatar: person.profile.avatar,
+                relationship: person.class,
+                online: person.online
+            }
+            knownMembersInfo.push(personInfo);
+        }
+        //list known members
+
+        if ((typeof knownMembersInfo != 'undefine') && knownMembersInfo.length > 0) {
+            for (var i = 0; i < knownMembersInfo.length; i++) {
+                listMembers(knownMembersInfo[i])
+            }
+        }
+        //get unknown members information
+        if ((typeof unknownMembers != 'undefine') && unknownMembers.length > 0) {
+
+            var info = {
+                sender: user.username,
+                unknownMembers: unknownMembers
+            };
+            socket.emit('getUnknownMembersInfo', info, function(membersInfo) {
+                for (var i = 0; i < membersInfo.length; i++) {
+                    listMembers(membersInfo[i])
+                }
+            })
+        }
+    });
+    $('body').on('click', '.leave button', function() {
+        $('.total').remove();
+        members = null; //release the memory of members
+    });
+    $('body').on('click', '.join button', function() {
+        var groupName = $('.group-name-info').html();
+        var info = {
+            name: groupName,
+            username: user.username
+        }
+        $('.total').remove();
+        socket.emit('join group', info);
+        members = null;
+        playSound('sound/here-i-am.mp3');
+    });
+    $('body').on('click', '#closeGroupInfo', function() {
+        $('.group-members-list').remove();
+    });
+    $('body').on('click', '.member-list-invite button', function() {
+        var invitee = $(this).parent().parent().find('.member-list-username').html();
+        var inviteeName = $(this).parent().parent().find('.member-list-name').html();
+        $('.total').remove();
+        invitePeople(invitee, inviteeName);
+    });
+
+    /* invite someone to group events */
+
+    $('body').on('click', '.groups-close .fa-times', function() {
+        $('.total').remove();
+    });
+    $('body').on('click', '.next button', function(e) {
+        e.preventDefault();
+        var targetGroup = $('input[name = "group"]:checked').attr('id').replace(/\"/g, "");
+        var groupInfo = getGroupInfo(targetGroup);
+        $('.groups').remove();
+        var selectUsersDiv = $('<div class = "select-users"></div>');
+        var selectGroup = $('<div class = "hide"></div>');
+        selectGroup.html(targetGroup);
+        selectUsersDiv.append(selectGroup);
+        var closeDiv = $('<div class = "groups-close"><i class = "fa fa-times"></i></div>');
+        selectUsersDiv.append(closeDiv);
+        var p = $('<p>group "' + targetGroup + '" is selected, Please select user(s)</p>');
+        selectUsersDiv.append(p);
+        var selectAll = $('<div class = "select-all"><input type="checkbox" name = "selectAll" value = "selectAll" onclick = "checkBoxToggle(this)" />Select All</div>');
+        selectUsersDiv.append(selectAll);
+        var multiSelect = $('<div class="multiselect"></div>');
+        selectUsersDiv.append(multiSelect);
+        var invite = $('<div class = "invite-users"><button class = "btn btn-success">Invite</button></div>');
+        selectUsersDiv.append(invite);
+        $('.total').append(selectUsersDiv);
+        var candidates = [];
+        var removeIndex = [];
+        /* remove the users who have joined this group*/
+        for (var i = 0; i < userList.length; i++) {
+            candidates.push(userList[i].username);
+        };
+
+        for (let i = 0; i < groupInfo.members.length; i++) {
+            for (var j = 0; j < candidates.length; j++) {
+                if (groupInfo.members[i] === candidates[j]) {
+                    candidates.splice(j, 1)
+                }
+            }
+        }
+        for (let i = 0; i < candidates.length; i++) {
+            var person = getPersonalInfo(candidates[i]);
+            var name = person.profile.first_name + ' ' + person.profile.last_name;
+            var option = $('<input type="checkbox" name="selectUser" value="' + candidates[i] + '" onclick ="toggleAll(this)" class = "checkBox"/>' + name + '<br>');
+            $('.multiselect').append(option);
+        }
+
+    });
+    $('body').on('click', '.invite-users button', function() {
+        var targetGroup = $('.select-users .hide').html();
+        var selectedUsers = [];
+        var select = $('.checkBox:checked');
+        for (var i = 0; i < select.length; i++) {
+            selectedUsers.push(select[i].defaultValue);
+        }
+
+        var info = {
+            sender: user.username,
+            selectedUsers: selectedUsers,
+            targetGroup: targetGroup
+        }
+        $('.total').remove();
+        socket.emit('invite someone to group', info, function(result) {
+            if (result) {
+                var content = "You have send an invitation to " + selectedUsers.length + ' people';
+            }
+            popupOnlineNotice(content);
+
+        })
+    });
+    $('body').on('click', '#acceptGroupRequest', function() {
+
+        var group = $(this).parent().parent().find('.invite-group').html();
+        var info = {
+            name: group,
+            username: user.username
+        }
+        socket.emit('join group', info);
+        $(this).parent().parent().remove();
+        //popupOnlineNotice('You select joining group ' + group);
+    });
+    $('body').on('click', '#rejectGroupRequest', function() {
+        var group = $(this).parent().parent().find('.invite-group').html();
+        $(this).parent().parent().remove();
+        popupOnlineNotice('You decline to join the group ' + group);
+    });
+    /* group right click events*/
+    $('body').on('contextmenu', '.group-info a', function(e) {
+        e.preventDefault();
+        var selectedGroup = $(this).attr('id');
+        $('#contextMenu2 .hide').html(selectedGroup);
+        $('#contextMenu2').css({
+            display: "block",
+            left: e.pageX,
+            top: e.pageY
+        });
+        var groupInfo = getGroupInfo(selectedGroup);
+        if (user.username != groupInfo.owner) {
+            $('#removeFromGroup').parent().show();
+            $('#changeGroupAvatar').parent().hide();
+            $('#removeGroup').parent().hide();
+
+        } else {
+            $('#removeFromGroup').parent().hide();
+            $('#changeGroupAvatar').parent().show();
+            $('#removeGroup').parent().show();
+
+        }
+        return false;
+    });
+    $('#changeGroupAvatar').on('click', function() {
+        var groupName = $(this).parent().parent().parent().find('.hide').html();
+        var group = getGroupInfo(groupName);
+        if (group.owner === user.username) {
+            selectGroupAvatar(groupName);
+        }
+    })
+    $('#viewInfoGroup').on('click', function() {
+        var groupName = $(this).parent().parent().parent().find('.hide').html();
+
+        var info = {
+            username: user.username,
+            name: groupName
+        }
+        socket.emit('get group info', info);
+    });
+    $('#removeFromGroup').on('click', function() {
+        var groupName = $(this).parent().parent().parent().find('.hide').html();
+
+        var info = {
+            username: user.username,
+            groupName: groupName
+        }
+
+        socket.emit('withdraw from group', info);
+
+        var name = groupName.replace(/\s/g, '');
+        var divs = $('#' + name + 'Div');
+        divs.remove();
+        var index = groupList.indexOf(groupName);
+        groupList.splice(index, 1);
+        if (currentGroup === groupName) {
+            $('#chatWindow').attr('class', 'hide');
+            currentGroup = null;
+        }
+        popupOnlineNotice('You are withdrawn from group ' + groupName);
+
+    });
+    $('#removeGroup').on('click', function() {
+        var groupName = $(this).parent().parent().parent().find('.hide').html();
+        //check if user is the owner of this group
+        for (var i = 0; i < groupList.length; i++) {
+            if (groupList[i].name === groupName) {
+                if (groupList[i].owner != user.username) $.Zebra_Dialog('You are not owner of this group, so you have no right to remove this group', {
+                    type: 'error',
+                    title: 'Remove Group Error'
+                });
+                else {
+                    var info = {
+                        owner: user.username,
+                        groupName: groupName
+                    };
+                    socket.emit('remove group', info);
+                    if (currentGroup === groupName) {
+                        $('#chatWindow').attr('class', 'hide');
+                        currentGroup = null;
+                    }
+                }
+            }
+        }
+    });
+    //send image
+    $("body").on('click', '#submitImage', function(e) {
+        e.preventDefault();
+        if ($('#imageUpload').val() === "") return;
+        var imageData = $('#targetImg').attr('src');
+        if (imageData === null) return;
+        $('.total').remove();
+        var sendDate = new Date();
+        var day = sendDate.getDate();
+        var month = sendDate.getMonth() + 1;
+        var year = sendDate.getFullYear();
+        var hour = sendDate.getHours();
+        var minute = sendDate.getMinutes();
+        if (parseInt(minute) < 10) {
+            minute = '0' + minute.toString();
+
+        }
+        //var findIt = false;
+        if (interlocutor != null) {
+            var newMessage = {
+                type: 'image',
+                sender: user.username,
+                receiver: interlocutor,
+                content: imageData,
+                date: {
+                    year: year,
+                    month: month,
+                    day: day,
+                    hour: hour,
+                    minute: minute
+                }
+            };
+            saveSendRecord(newMessage);
+            socket.emit('send message', newMessage);
+            displaySendMessage(newMessage);
+        } else {
+            if (currentGroup != null) {
+                var newMessage = {
+                    type: 'image',
+                    sender: user.username,
+                    senderName: user.profile.first_name + ' ' + user.profile.last_name,
+                    group: currentGroup,
+                    content: imageData,
+                    date: {
+                        year: year,
+                        month: month,
+                        day: day,
+                        hour: hour,
+                        minute: minute
+                    }
+                };
+                savePublicSendRecord(newMessage);
+                displaySendMessage(newMessage);
+                socket.emit('send group message', newMessage);
+            }
+        }
+    });
+    $("body").on('click', '#cancelSubmit', function() {
+        $('.total').remove();
+    });
+    /* reply friend invitation events */
+
+    $('body').on('click', '#acceptRequest', function(e) {
+        var inviter = $(this).parent().parent().find('.inviter').html();
+        var sendDate = new Date();
+        var day = sendDate.getDate();
+        var month = sendDate.getMonth() + 1;
+        var year = sendDate.getFullYear();
+        var reply = {
+            inviter: inviter,
+            invitee: user.username,
+            date: {
+                year: year,
+                month: month,
+                day: day
+            }
+        }
+        socket.emit('accept request', reply);
+        //$('.popup-request').remove();
+        $(this).parent().parent().remove();
+    });
+
+    $('body').on('click', '#rejectRequest', function(e) {
+        var inviter = $(this).parent().parent().find('.inviter').html();
+        var reply = {
+            inviter: inviter,
+            invitee: user.username
+        }
+        socket.emit('reject request', reply);
+        $('.popup-request').remove();
+    });
+
+    /* search people events */
+
+    $('body').on('click', '.search-title .fa-times', function() {
+        $('.total').remove();
+    });
+    $('body').on('click', '#searchFriend', function(e) {
+        e.preventDefault();
+        var target = $('#people').val();
+        if (target === user.username) return;
+        else {
+            $('.search-function-bar').remove();
+            socket.emit('search people', target, function(result) {
+                if (!result) {
+                    $('.total').remove();
+                    $.Zebra_Dialog('Sorry, we can not find the people. Maybe the user name you typed is incorrect. Please try another user name', {
+                        type: 'error',
+                        title: 'find people error',
+                        buttons: [{ caption: 'OK' }]
+                    })
+                } else {
+                    //list the target information
+                    var peopleDiv = $('<div class = "search-people-result"></div>');
+                    var titleDiv = $('<h4></h4>');
+                    var title = 'Result we found with user name ' + target;
+                    titleDiv.html(title);
+                    peopleDiv.append(titleDiv);
+                    var targetDiv = $('<div class = "target-div"></div>');
+                    targetDiv.html(target);
+                    peopleDiv.append(targetDiv);
+                    var infoDiv = $('<div class= "people-info"></div>');
+                    peopleDiv.append(infoDiv);
+                    var avatar = $('<img class = "people-avatar" />');
+                    avatar.attr('src', result.avatar)
+                    infoDiv.append(avatar);
+                    var profileDiv = $('<div class = "people-profile"></div>');
+                    infoDiv.append(profileDiv);
+                    var nameDiv = $('<div class= "peopel-name"></div>');
+                    nameDiv.html(result.name);
+                    profileDiv.append(nameDiv);
+                    var genderDiv = $('<div class = "people-gender"></div>');
+                    genderDiv.html(result.gender)
+                    profileDiv.append(genderDiv);
+                    var locationDiv = $('<div class = "people-location"></div>');
+                    if (result.location != null) locationDiv.html(result.location)
+                    else locationDiv.html('location: unknown');
+                    profileDiv.append(locationDiv);
+                    var inviteDiv = $('<div class = "invite"><button id="invitePeople" class = "btn btn-success">Invite People</button></div>');
+                    var cancelDiv = $('<div class = "cancel-invite"><button id = "cancelInvite" class = "btn btn-warning">Cancel</button></div>');
+                    peopleDiv.append(inviteDiv);
+                    peopleDiv.append(cancelDiv);
+
+                    var totalDiv = $('<div class = "total"></div>');
+                    var maskDiv = $('<div class = ".frosted-glass" ></div>');
+                    maskDiv.append(peopleDiv);
+                    totalDiv.append(maskDiv);
+                    totalDiv.appendTo('body');
+                }
+            })
+        }
+    });
+    $('body').on('click', '#invitePeople', function(e) {
+        e.preventDefault();
+        var inviteeName = $('.peopel-name').html();
+        var invitee = $('.target-div').html();
+        $('.total').remove();
+        invitePeople(invitee, inviteeName);
+    })
+    $('body').on('click', '#cancelInvite', function() {
+        $('.total').remove();
+    })
+
+    /*  close online notcie event*/
+
+    $('body').on('click', '.notice-close .fa-times', function(e) {
+        $(this).parent().parent().remove();
+    });
+
+    /*  media chat events  */
+
+    //accept media chat request
+    $('body').on('click', '#accept', function() {
+        var reply = {
+            sender: user.username,
+            receiver: $('#chater').html(),
+            useVideo: useVideo
+        }
+        $('.request-media-chat').remove();
+        if (videoChater != null || audioChater != null) { //if it is on video chat when receiving an incoming video chat request
+            $('.media-popup').remove(); //at first, current video chat should be removed if accept button was clicked
+
+            var receiver = videoChater != null ? videoChater : audioChater;
+            var disconnectVideoChat = {
+                sender: user.username,
+                receiver: receiver
+            }
+            socket.emit('disconnect media', disconnectVideoChat);
+            removeMedia(function(success) {
+                if (!success) { //if the old video chat can not be removed, decline the incoming video chat request
+                    alert('system failed to disconnect current video chat');
+                    socket.emit('request decline', reply);
+                }
+            });
+        }
+        setupLocalMedia(function() { //  a new video chat will be created, initializeing camera and audio device
+            socket.emit('receiver steam ok', reply);
+            $('.video').css('pointer-events', 'none');
+            $('.phone').css('pointer-events', 'none');
+
+        });
+
+    });
+
+    // decline media chat request
+    $('body').on('click', '#decline', function() {
+        var reply = {
+            sender: user.username,
+            receiver: $('#chater').html(),
+            useVideo: useVideo
+        }
+        $('.request-media-chat').remove();
+        socket.emit('request decline', reply);
+    });
+    $('body').on('click', '#min', function() {
+        if (!minimize) {
+            var winHeight = $(document).height();
+            var top = winHeight - 40;
+            $('.media-popup').animate({
+                width: '650px',
+                height: '40px',
+                left: '0px',
+                top: top + 'px'
+
+            }, 200);
+            $('.media-header').animate({
+                width: ' 650px',
+                height: '40px',
+            }, 200);
+            $('tab3').css('padding-left', '10em');
+            $('tab3').css('padding-right', '5.5em');
+            $('.local-media').hide();
+            $('.remote-media').hide();
+            minimize = true;
+            maximize = false;
+            $('#max').css('pointer-events', 'auto');
+        } else {
+            return;
+        }
+    });
+    $('body').on('click', '#max', function() {
+        if (!minimize && !maximize) {
+
+            $('.media-popup').animate({
+                width: '100%',
+                height: '100%',
+                left: '0px',
+                top: '0px'
+            }, 200);
+            $('.local-media').animate({
+                width: '49%',
+                height: 'auto'
+            }, 200);
+            var width = $(document).width() / 2 - 10;
+            $('#localVideo').attr('width', width + 'px');
+            $('#localVideo').attr('height', 'auto');
+            $('.remote-media').animate({
+                width: '49%',
+                height: 'auto'
+            }, 200);
+            $('#remoteVideo').attr('width', width + 'px');
+            $('#remoteVideo').attr('height', 'auto');
+            var distance = $(document).width() - 288;
+            var paddingLeft = distance * 9 / 15.5;
+            var paddingRight = distance * 6.5 / 15.5;
+            $('tab3').css('padding-left', paddingLeft + 'px');
+            $('tab3').css('padding-right', paddingRight + 'px');
+            maximize = true;
+            minimize = false;
+        } else {
+            $('.local-media').show();
+            $('.remote-media').show();
+            $('.media-popup').animate({
+                width: '650px',
+                height: '290px',
+                left: '10px',
+                top: '10px'
+            }, 200);
+            $('.local-media').animate({
+                width: '320px',
+                height: '240px'
+
+            }, 200);
+            $('.remote-media').animate({
+                width: '320px',
+                height: '240px'
+            }, 200);
+            $('#localVideo').attr('width', 'auto');
+            $('#localVideo').attr('height', '240px');
+            $('#remoteVideo').attr('width', 'auto');
+            $('#remoteVideo').attr('height', '240px');
+            $('tab3').css('padding-left', '10em');
+            $('tab3').css('padding-right', '5.5em');
+            maximize = false;
+            minimize = false;
+            if (audioChater != null) $('#max').css('pointer-events', 'none');
+        }
+    });
+
+    //move media chat window
+    $('body').on('mousedown', '.media-header', function(e) {
+        $(this).css("cursor", "move"); //change mouse shape
+        var offset = $(this).offset(); //get the position of div 
+        var x = e.pageX - offset.left; //get the distance between mouse and the left of div
+        var y = e.pageY - offset.top; //get the distance between mouse and the top of div 
+        $(document).bind("mousemove", function(ev) { //bind the mouse move event
+
+            $(".media-popup").stop();
+
+            var _x = ev.pageX - x; //get the move offset value in x axis 
+            var _y = ev.pageY - y; //get the move offset value in y axis
+
+            $(".media-popup").animate({ left: _x + "px", top: _y + "px" }, 10);
+        });
+        $(document).mouseup(function() {
+            $(".media-popup").css("cursor", "default");
+            $(this).unbind("mousemove");
+        });
+    });
+    $('body').on('mousemove', '.media-title', function(e) {
+        $(this).css("cursor", "pointer");
+        $(this).css("color", "yellow");
+    });
+    $('body').on('mouseleave', '.media-title', function(e) {
+
+        $(this).css("color", "dimgray");
+    });
+    $('body').on('click', '#disconnectVideo', function() {
+        $.Zebra_Dialog('Do you want to end up this video chat?', {
+            type: 'question',
+            title: 'Question',
+            buttons: [{
+                caption: 'OK',
+                callback: exitMediaChat
+            }, { caption: 'Cancel' }]
+        })
+    });
+
+    /* take snapshot events */
+
+    $('body').on('mouseover', '.closeSnapshot .fa-times', function() {
+        $(this).css('cursor', 'pointer');
+        $(this).css('color', 'yellow');
+    });
+    $('body').on('mouseleave', '.closeSnapshot .fa-times', function() {
+
+        $(this).css('color', 'snow');
+    });
+    $('body').on('click', '.closeSnapshot .fa-times', function() {
+        $(this).parent().parent().remove();
+        snapImgOffset -= 10;
+    });
+
+    /* friend list left click event */
+
+    $('body').on('click', '.contacts-info a', function(e) {
+        e.preventDefault();
+        interlocutor = $(this).attr('id');
+        currentGroup = null;
+        displayPrivateChatWindow();
+    });
+
+    $('body').on('click', '.contacts-info img', function(e) {
+        //e.preventDefault();
+        interlocutor = $(this).parent().find('a').attr('id');
+        currentGroup = null;
+        displayPrivateChatWindow();
+    });
+    $('body').on('click', '.contacts-info .full-name', function(e) {
+        e.preventDefault();
+        interlocutor = $(this).find('a').attr('id');
+        currentGroup = null;
+        displayPrivateChatWindow();
+    });
+    $('body').on('click', '.contacts-info .contact-name', function(e) {
+        e.preventDefault();
+        interlocutor = $(this).find('a').attr('id');
+        currentGroup = null;
+        displayPrivateChatWindow();
+    });
+    $('body').on('click', '.contacts-info .latest-message', function(e) {
+        e.preventDefault();
+        interlocutor = $(this).parent().find('a').attr('id');
+        currentGroup = null;
+        displayPrivateChatWindow();
+    });
+    /* friend list right click event */
+    $('body').on('contextmenu', '.contacts-info a', function(e) {
+        var contact = $(this).attr('id');
+        $('#contextMenu .hide').html(contact);
+        $('#contextMenu').css({
+            display: "block",
+            left: e.pageX,
+            top: e.pageY
+        });
+        return false;
+    });
+
+    /* html click event*/
+    $('html').click(function() {
+        $('#contextMenu').hide();
+        $('#contextMenu2').hide();
+        $('#contextMenuInput').hide();
+        $('#liContext').remove();
+        $('.li-contextmenu').remove();
+    });
+    /* relationship change events */
+    $('#changeRelationship').on('click', function() {
+        var contacter = $(this).parent().parent().parent().find('.hide').html();
+        var person = getPersonalInfo(contacter);
+        var selectRelationDiv = $('<div class = "select-relation"></div>');
+        var titleDiv = $('<div class = "relation-title-div"><i class = "fa fa-times"></i></div>');
+        var targetDiv = $('<div class = "hide"></div>');
+        targetDiv.html(contacter);
+        selectRelationDiv.append(targetDiv);
+        var title = $('<h5></h5>');
+        var titleContent = 'Please select one of the following relationship for ';
+        title.html(titleContent);
+        var span = $('<span class = "relation-target"></span>');
+        span.html(person.profile.first_name + ' ' + person.profile.last_name);
+        title.append(span);
+        selectRelationDiv.append(titleDiv);
+        selectRelationDiv.append(title);
+
+        var formDiv = $('<form></form>');
+        selectRelationDiv.append(formDiv);
+        var checkBox = $('<input type = "radio" name = "relationship" value = "family">Family</input>' + '<br>' +
+            '<input type = "radio" name = "relationship" value = "friend">Friend</input>' + '<br>' +
+            '<input type = "radio" name = "relationship" value = "classmate">Classmate</input>' + '<br>' +
+            '<input type = "radio"  name = "relationship" value = "colleague">Colleague</input>' + '<br>' +
+            '<input type = "radio"  name = "relationship" value = "business">Bussiness</input>');
+        formDiv.append(checkBox);
+        var confirmDiv = $('<div class = "confirm-relation"><button class = "btn btn-success">Confirm</button></div>');
+        formDiv.append(confirmDiv);
+        var totalDiv = $('<div class = "total"></div>');
+        totalDiv.append(selectRelationDiv);
+        totalDiv.appendTo('body');
+
+    });
+    $('body').on('click', '.relation-title-div .fa-times', function() {
+        $('.total').remove();
+    });
+    $('body').on('click', '.profile-button button', function() {
+        $('.total').remove();
+    })
+    $('body').on('click', '.confirm-relation button', function(e) {
+        e.preventDefault();
+        var target = $('.select-relation .hide').html();
+        var relationship = $('input[name = "relationship"]:checked').val();
+
+        var targetName = $('.relation-target').html();
+        var info = {
+            sender: user.username,
+            target: target,
+            relationship: relationship
+        }
+        socket.emit('change relationship', info);
+        $('.total').remove();
+        for (var i = 0; i < userList.length; i++) {
+            if (userList[i].username === target) {
+                userList[i].class = relationship;
+                break;
+            }
+        }
+        var filter = $('.droplist tab1').html();
+        if (filter != 'All') $('#' + target + 'Div').remove(); //if contact display filter is not all, remove this contact from contact list
+        var content = "You add " + targetName + ' to your ' + relationship;
+        popupOnlineNotice(content);
+
+
+    });
+    $('#viewInfo').on('click', function() {
+        var contacter = $(this).parent().parent().parent().find('.hide').html();
+        var person = getPersonalInfo(contacter);
+        uploadProfile(person);
+    });
+    $('body').on('click', '.contect-profile-title .fa-times', function() {
+        $('.total').remove();
+    });
+    /*contacter remove events */
+    $('#removeConnection').on('click', function() {
+        var contacter = $(this).parent().parent().parent().find('.hide').html();
+        var person = getPersonalInfo(contacter);
+        var contactName = person.profile.first_name + ' ' + person.profile.last_name;
+        var removeConnectionDiv = $('<div class = "remove-connection-div"></div>');
+        var targetDiv = $('<div class = "hide"></div>');
+        targetDiv.html(contacter);
+        removeConnectionDiv.append(targetDiv);
+        var content = $('<h5></h5>');
+        var text = "Are you sure to remove " + contactName + ' from your contact list'
+        content.html(text);
+        removeConnectionDiv.append(content);
+        var confirmDiv = $('<div class = "confirm-contact-remove"><button class = "btn btn-danger">Confirm</button></div>');
+        removeConnectionDiv.append(confirmDiv);
+        var cancelDiv = $('<div class = "cancel-contact-remove"><button class = "btn btn-success">Cancel</button></div>');
+        removeConnectionDiv.append(cancelDiv);
+        var total = $('<div class = "total"></div>');
+        total.append(removeConnectionDiv);
+        total.appendTo('body');
+    });
+    $('body').on('click', '.cancel-contact-remove button', function() {
+        $('.total').remove();
+    });
+    $('body').on('click', '.confirm-contact-remove', function() {
+        var contacter = $('.remove-connection-div .hide').html();
+        var info = {
+            sender: user.username,
+            target: contacter
+        }
+        socket.emit('remove contacter', info);
+        $('.total').remove();
+    });
+    /* update profile avatar */
+    $("body").on('click', '#send', function(e) {
+        e.preventDefault();
+        basic.croppie('result', {
+            type: 'canvas',
+            size: 'viewport'
+        }).then(function(data) {
+            if (!$('#avatar').val()) {
+                $('#error-message').html('You did not select a file');
+                $('#error-message').attr('class', 'error-message');
+                return;
+            }
+            var message = {
+                sender: user.username,
+                receivers: onlineFriends,
+                avatar: data
+            }
+
+            socket.emit('update avatar', message);
+            $('#totalDiv').remove();
+            basic = null;
+        })
+    });
+    $("body").on('click', '#cancel', function() {
+        $('#totalDiv').remove();
+    });
+
+    /*  enlarge image events */
+
+    $('body').on('click', '.image-frame-left', enlargeImg);
+    $('body').on('click', '.image-frame-right', enlargeImg);
+
+    //close enlargeImg 
+    $('body').on('click', '.close', function() {
+        change = false;
+        $('.total').remove();
+    });
+    //scale-up event
+    $('body').on('click', '#magnify', function() {
+
+        if (parseInt($('#range').val()) >= 175) { //set max scale rate ti 175%
+            return;
+        } else {
+            if (!change) {
+                oldWidth = $('#fullImage').width();
+                oldHeight = $('#fullImage').height();
+                change = true;
+            }
+
+            $('#range').val(parseInt($('#range').val()) + 25);
+            var newWidth = oldWidth * parseInt($('#range').val()) / 100;
+            var newHeight = oldHeight * parseInt($('#range').val()) / 100;
+
+            $('#fullImage').css('width', newWidth);
+            $('#fullImage').css('height', newHeight);
+            $('.factor h3').html($('#range').val() + '%');
+        }
+
+    });
+    //scale-down event
+    $('body').on('click', '#minify', function() {
+
+        if (parseInt($('#range').val()) <= 25) { //set min scale rate to 25%
+            return;
+        } else {
+            if (!change) {
+                oldWidth = $('#fullImage').width();
+                oldHeight = $('#fullImage').height();
+                change = true;
+            }
+            $('#range').val(parseInt($('#range').val()) - 25);
+            var newWidth = oldWidth * parseInt($('#range').val()) / 100;
+            var newHeight = oldHeight * parseInt($('#range').val()) / 100;
+            $('#fullImage').css('width', newWidth);
+            $('#fullImage').css('height', newHeight);
+            $('.factor h3').html($('#range').val() + '%');
+        }
+
+    });
+    //scale range bar event
+    $('body').on('change', '#range', changeSize);
+
+
+    /*  file attachement events */
+
+    //clicking the submit button event on file attachement form
+    $("body").on('click', '#submitFiles', function(e) {
+        e.preventDefault();
+        var receiver = interlocutor != null ? interlocutor : currentGroup;
+        var files = $('#myFiles').prop('files');
+
+        //remove file attachement form
+        $('.total').remove();
+        newFileUploadAvailable = false;
+        //disable file attachement button when filea are uploading to server
+        if (toggleFloatInput) $('#fileAttachement2').css('pointer-events', 'none');
+        else $('#fileAttachement').css('pointer-events', 'none');
+
+        //create a div to display file upload progress status
+        var progressUploadDiv = $('<div class = "file-upload-status"><h5></h5><ul class = "file-upload-list"></ul></div>');
+        $('.chat-interface').append(progressUploadDiv);
+        if (interlocutor != null) {
+            for (var x in userList) {
+                if (userList[x].username === receiver) {
+                    $('.file-upload-status').find('h5').html('Sending files to ' + userList[x].profile.first_name + ' ' + userList[x].profile.last_name);
+                }
+            }
+        } else {
+            $('.file-upload-status').find('h5').html('Sending files to group ' + currentGroup);
+        }
+
+
+        for (var i = 0; i < files.length; i++) {
+
+            var li = $('<li class = "upload-item"></li>');
+            li.attr('id', receiver + i);
+            li.html(files[i].name);
+            var progressDiv = $('<div class = "progress"></div>');
+            var barDiv = $('<div class="bar"></div>');
+            progressDiv.append(barDiv);
+            var percentDiv = $('<div class="percent">0%</div>');
+            progressDiv.append(percentDiv);
+            li.append(progressDiv);
+            $('.file-upload-list').append(li);
+            var progressId = receiver + i;
+            var data = new FormData();
+            data.append('sender', user.username);
+            data.append('senderName', user.profile.first_name + ' ' + user.profile.last_name);
+            data.append('groupName', currentGroup);
+            data.append('receiver', receiver);
+            data.append('progressId', progressId);
+            data.append('file', files[i]);
+
+            // XMLHttpRequest Object
+            var xhr = new XMLHttpRequest();
+            xhr.upload.li = li;
+            xhr.upload.div = progressUploadDiv;
+            xhr.open('post', 'user/sendFile', true);
+            xhr.upload.addEventListener('progress', function(evt) {
+                var percentage = Math.round(evt.loaded / evt.total * 100).toFixed(2) + '%';
+                this.li.find('.percent').html(percentage);
+                this.li.find('.bar').width(percentage);
+
+            }, false);
+            xhr.send(data);
+        }
+    });
+    $('body').on('click', '#closeFileUpload', function() {
+        $('.total').remove();
+    });
+
+    /*  Edit profile events */
+
+    $('body').on('click', '#homeLink', function() {
+        $('#totalDiv').remove();
+        //location.reload();
+    });
+    $('body').on('click', '#saveProfile', function(e) {
+        e.preventDefault();
+        if (!$('#firstname').val() || !$('#lastname').val()) return;
+        /*$.post('/user/saveProfile', $('#profileForm').serialize(), function(result) {
+            
+        })*/
+        var userId = $('#userId').val();
+        var gender = $('input[name = "gender"]:checked').val();
+        var info = {
+            userId: userId,
+            first_name: $('#firstname').val(),
+            last_name: $('#lastname').val(),
+            gender: gender,
+            city: $('#city').val(),
+            province: $('#province').val(),
+            country: $('#country').val(),
+            postal_code: $('#postalcode').val()
+        }
+        socket.emit('saveProfile', info, function(result) {
+            $('.user-info').html(result.first_name + " " + result.last_name);
+            $('.location').html(result.location.city + "." + result.location.province + "<br>" + result.location.postal_code + " " + result.location.country_code);
+            user.profile = result;
+            // $('#taskDiv').find('input, textarea, button, select').attr('disabled', 'disabled');
+            // $('a').on('click.myDisable', function() { return false; });
+
+            $.Zebra_Dialog('Profile information was saved successfully, please click OK to exit', {
+                type: 'confirmation',
+                title: 'Success Information',
+                buttons: [
+                    { caption: 'OK', callback: exitProfile }
+
+                ],
+                onClose: exitProfile
+            });
+        })
+
+
+    });
+    $('body').on('click', '#profileLink', function() {
+        $('.task-title').find('h2').html('Genetal Settings');
+        $('#passwordForm').attr('class', 'hidden');
+        $('#profileForm').attr('class', 'profile-form');
+        $('#profileForm').validator();
+    });
+    $('body').on('click', '#passwordLink', function() {
+        $('.task-title').find('h2').html('Change Password');
+        $('#profileForm').attr('class', 'hidden');
+        $('#passwordForm').attr('class', 'password-form');
+        $('#passwordForm').validator();
+    });
+    $('body').on('click', '#savePassword', function() {
+        if (($('#valid_oldpass').text() != 'Minimum of 6 characters') || ($('#valid_newpass').text() != 'Minimum of 6 characters') || ($('#confirm_pass').text() != ""))
+            return;
+        $.post('/user/changePassword', $('#passwordForm').serialize(), function(result) {
+            //$('#taskDiv').find('input, textarea, button, select').attr('disabled', 'disabled');
+            //$('a').on('click.myDisable', function() { return false; });
+            if (result === "OK") {
+                $.Zebra_Dialog('Password was changed successfully, please click OK to exit and log in', {
+                    type: 'confirmation',
+                    title: 'Success Information',
+                    buttons: [
+                        { caption: 'OK', callback: logout }
+
+                    ],
+                    onClose: logout
+                });
+            } else {
+                $.Zebra_Dialog('Old password is incorrect, please click Return to exit and try again', {
+                    type: 'error',
+                    title: 'Error Information',
+                    buttons: ['Return']
+
+                });
+            }
+        })
+    });
+    $('body').on('click', '#profilePhoto', function() {
+        $('.total').remove();
+        uploadAvatar();
+    });
     /* Chat History */
 
     $('.history').on('click', function(e) {
@@ -718,36 +2009,38 @@ $(document).ready(function() {
         $('#historyList').empty();
         oldHistoryDate = null;
         var insertData = false;
+        historyEnd = false;
         if (interlocutor != null) {
             var person = getPersonalInfo(interlocutor);
             readPrivateChatHistory(interlocutor, function(result) {
                 if (result != null) {
-                    currentReadId = result.length - 1;
-                    getTenRecords(result, function(records) {
-                        //console.log(records);
+                    if (typeof currentHistoryId[interlocutor] === 'undefined') {
+                        currentHistoryId[interlocutor] = result.length;
+                    }
+                    currentReadId = currentHistoryId[interlocutor] - 1;
+                    displayCacheData = result;
+                    getTenRecords(displayCacheData, function(records) {
                         displayPrivateChatHistory(interlocutor, records, insertData);
                     })
-                } else {
-                    var person = getPersonalInfo(interlocutor);
-                    $('.history-chatter').html(person.profile.first_name + ' ' + person.profile.last_name);
-                    $('#historyList').append('<li class = "no-data">No Data</li>');
-                    $('#chatHistory').show();
-                }
+                } else displayNoMessage(person.profile.first_name + ' ' + person.profile.last_name);
+
             })
+
+
         } else {
             var group = getGroupInfo(currentGroup);
             readPublicChatHistory(currentGroup, function(result) {
                 if (result != null) {
-                    currentReadId = result.length - 1;
-                    getTenRecords(result, function(records) {
-                        console.log(records);
+                    if (typeof currentHistoryId[currentGroup] == 'undefined') {
+                        currentHistoryId[currentGroup] = result.length;
+                    }
+                    currentReadId = currentHistoryId[currentGroup] - 1;
+                    displayCacheData = result;
+                    getTenRecords(displayCacheData, function(records) {
                         displayPublicChatHistory(currentGroup, records, insertData);
                     })
                 } else {
-
-                    $('.history-chatter').html(currentGroup);
-                    $('#historyList').append('<li class = "no-data">No Data</li>');
-                    $('#chatHistory').show();
+                    displayNoMessage(group.name);
                 }
             })
         }
@@ -808,8 +2101,10 @@ $(document).ready(function() {
     $('.chat-history-tool .fa-power-off').on('click', function() {
         //$('#historyList').empty();
         $('#chatHistory').hide();
+        displayCacheData = [];
         currentReadId = null;
         oldHistoryDate = null;
+
     });
     $('.chat-history-tool .fa-file-text-o').on('click', function() {
         var element = document.getElementById('chatListDiv');
@@ -820,1358 +2115,25 @@ $(document).ready(function() {
     });
     $('.chat-history-tool .fa-plus').on('click', function(e) {
         e.preventDefault();
+        if (historyEnd) return;
         if (currentReadId >= 0) {
             var insertData = true;
-            if (interlocutor != null) {
-                readPrivateChatHistory(interlocutor, function(result) {
-                    if (result != null) {
-                        getTenRecords(result, function(data) {
-                            var cacheData = [];
-                            for (var i = data.length - 1; i >= 0; i--) {
-                                cacheData.push(data[i]);
-                            }
-                            displayPrivateChatHistory(interlocutor, cacheData, insertData);
-                        })
+            getTenRecords(displayCacheData, function(data) { //read data from display cache
+                if (data != null) {
+                    var cacheData = [];
+                    for (var i = data.length - 1; i >= 0; i--) {
+                        cacheData.push(data[i]);
                     }
-                })
-            } else {
-                readPublicChatHistory(currentGroup, function(result) {
-                    if (result != null) {
-                        getTenRecords(result, function(data) {
-                            var cacheData = [];
-                            for (var i = data.length - 1; i >= 0; i--) {
-                                cacheData.push(data[i]);
-                            }
-                            displayPublicChatHistory(currentGroup, cacheData, insertData);
-                        })
-                    }
-                })
-            }
-        } else {
-            $('#historyList li:eq(0)').before('<li class = "data-end">----------End----------</li>');
-        }
-    });
-});
-
-/* context menu on message*/
-
-$('body').on('click', '#liLink', function(e) {
-    e.preventDefault();
-    var url = $(this).attr('href');
-    window.open(url, "_blank");
-    $(this).parent().remove();
-});
-$('body').on('contextmenu', '.chat-list li img', function(e) {
-    e.preventDefault();
-
-    var link = $(this).attr('src');
-    var contextmenu = $('<div id = "liContext"></div>');
-    var linkElement = $('<a id = "liLink" >Open</a>');
-    contextmenu.append(linkElement);
-    linkElement.attr('href', link);
-    $(this).parent().append(contextmenu);
-    $('#liContext').css({
-        display: "block",
-        position: fixed,
-        left: e.pageX,
-        top: e.pageY
-    });
-});
-
-/* Highlight text right click function */
-var selectedText = null;
-$('body').on('contextmenu', '.chat-content', function(e) {
-    e.preventDefault();
-    if ($('#liContextMenu') != null) $('#liContextMenu').remove();
-    var linkElement = null;
-    var contextDiv = null;
-    selectedText = window.getSelection().toString();
-    if (e.target.tagName.toLowerCase() === 'a') {
-        var link = $(e.target).attr('href');
-        console.log(link)
-        linkElement = $('<a  id = "liLink" class = "open-link">Open</a>');
-        linkElement.attr('href', link);
-    }
-    if (selectedText.length === 0) {
-        if (linkElement != null) {
-            contextDiv = $('<div id = "liContextMenu" class = "li-contextmenu"></div>');
-            contextDiv.append(linkElement);
-        } else return;
-    } else {
-        contextDiv = $('<div id = "liContextMenu" class = "li-contextmenu"><a  href= "#" class = "text-copy">Copy</a><a href = "#" class = "text-search">Search</a></div>');
-        if (linkElement != null) contextDiv.append(linkElement);
-    }
-    $(e.target).parent().append(contextDiv);
-    $('#liContextMenu').css({
-        position: 'fixed',
-        display: "block",
-        top: e.pageY,
-        left: e.pageX
-    });
-
-});
-$('body').on('mousemove', '.li-contextmenu', function() {
-    $('.arrowup').css('border-bottom-color', '#666');
-});
-$('body').on('mouseleave', '.li-contextmenu', function() {
-    $('.arrowup').css('border-bottom-color', '#222');
-})
-$('#chatWrapper').on('click', '.text-copy', function(e) {
-    e.preventDefault();
-    var copied;
-    if (selectedText != null) {
-        try {
-            // Copy the text
-            copied = document.execCommand('copy');
-
-        } catch (ex) {
-            copied = false;
-        }
-        if (copied) selectedText = null;
-        copied = false;
-    }
-    $('.li-contextmenu').remove();
-});
-$('#chatWrapper').on('click', '.text-search', function(e) {
-        e.preventDefault;
-        if (selectedText != null) {
-            window.open('https://www.google.ca/search?q=' + selectedText);
-        }
-    })
-    //remove liContextMenu menu if clicking any other element but liContextMenu 
-$(document).on('click', 'body', function(e) {
-    if (e.target.id != 'liContextMenu' && selectedText != null) {
-        $('.li-contextmenu').remove();
-        selectedText = null;
-    }
-    if (e.target.id != '#textarea') {
-        if ($('#inputContextMenu') != null) $('#inputContextMenu').remove();
-    }
-});
-
-/* group list left click event */
-
-$('body').on('click', '.group-info a', function() {
-
-    currentGroup = $(this).attr('id');
-    $('.friend-bar span').html('');
-    $('#chatList').empty(); //clear chat list
-
-    for (var x in groupList) {
-        if (groupList[x].name === currentGroup) {
-
-            $('.friend-img').attr('src', groupList[x].avatar);
-            $('#friendName').html(groupList[x].name);
-            $('#chatWindow').attr('class', 'chat-window');
-            $('#chatWindow').show();
-            $('.snapshot').css('pointer-events', 'none');
-            $('.video').css('pointer-events', 'none');
-            $('.phone').css('pointer-events', 'none');
-
-            for (var i in publicMessageList) {
-
-                if (publicMessageList[i].group === currentGroup) {
-
-                    for (var m in publicMessageList[i].message) {
-
-                        var chatItem, chatDiv, symbol;
-                        var sentByMe = publicMessageList[i].message[m].sender === user.username;
-                        var currentMessage = publicMessageList[i].message[m];
-                        if (!sentByMe) displayPublicReceiveMsg(currentMessage);
-                        else displaySendMessage(currentMessage);
-                    }
-
-                    count = parseInt(count) - parseInt(publicMessageList[i].count);
-                    publicMessageList[i].count = 0;
-                    //clear the current group messages in notification
-                    $('#' + currentGroup.replace(/\s/g, '') + 'Div').find('.new-message').html('');
-                    $('#' + currentGroup.replace(/\s/g, '') + 'Div').find('.latest-message').html('');
-                    if (count <= 0) {
-                        $('#noteMsg').css('color', 'lightgray');
-                        $('#notificationCount').html('');
-                    } else {
-                        $('#notificationCount').html(count);
-                    }
-                    notificationList = notificationList.filter(function(item) {
-                        return item.group != currentGroup; //clear current group's notices
-                    })
+                    if (interlocutor != null) displayPrivateChatHistory(interlocutor, cacheData, insertData);
+                    else displayPublicChatHistory(currentGroup, cacheData, insertData);
+                } else {
+                    $('#historyList li:eq(0)').before('<li class = "data-end">----------End----------</li>');
+                    historyEnd = true;
                 }
-            }
-            return;
-        }
-    }
-});
-
-/* create group events */
-$('body').on('click', '.confirm-create-group .btn-success', function() {
-    var newGroupName = $('#groupName').val();
-    $('#error-message').attr('class', 'hide');
-    var info = {
-        owner: user.username,
-        groupName: newGroupName
-    }
-    $('.total').remove();
-    socket.emit('new group', info, function(result) {
-        if (result != 'success') {
-            $.Zebra_Dialog('This group already exists', {
-                type: 'error',
-                title: 'Group Create Error'
             })
         } else {
-            selectGroupAvatar(newGroupName);
-        }
-    })
-});
-$('body').on('click', '.cancel-create-group .btn-danger', function() {
-    $('.total').remove();
-});
-//upload group avatar
-$('body').on('click', '.confirm-group-avatar .btn-success', function() {
-    var groupName = $('#groupName').html();
-    basic.croppie('result', {
-        type: 'canvas',
-        size: 'viewport'
-    }).then(function(data) {
-        if (!$('#groupAvatar').val()) {
-            $('#error-message').html('You did not select a file');
-            $('#error-message').attr('class', 'error-message');
-            return;
-        }
-        var message = {
-            sender: user.username,
-            groupName: groupName,
-            avatar: data
-        }
-        $('.total').remove();
-        socket.emit('update group avatar', message);
-
-    });
-
-});
-$('body').on('click', '.group-info .group-img', function(e) {
-    e.preventDefault();
-    var groupName = $(this).siblings().find('.full-name').find('a').html();
-    var group = getGroupInfo(groupName);
-    if (group.owner === user.username) {
-
-        selectGroupAvatar(groupName);
-    }
-});
-
-$('body').on('click', '.cancel-group-avatar .btn-danger a', function(e) {
-    e.preventDefault();
-    var groupName = $('#groupName').html();
-    var isNewGroup = true;
-    for (var i = 0; i < groupList.length; i++) {
-        if (groupList[i].name === groupName) {
-            isNewGroup = false;
-            break;
-        }
-    }
-    if (isNewGroup) {
-        var info = {
-            sender: user.username,
-            groupName: groupName
-        }
-        socket.emit('new group without avatar', info);
-    }
-    $('.total').remove();
-});
-
-/* remove group events */
-$('body').on('click', '.remove-group-confirm .btn-danger', function(e) {
-    e.preventDefault();
-    var targetGroup = $('input[name = "group"]:checked').attr('id').replace(/\"/g, "");
-    var info = {
-        owner: user.username,
-        groupName: targetGroup
-    };
-    socket.emit('remove group', info);
-    $('.total').remove();
-
-});
-
-
-/* search group events */
-
-$('body').on('keyup', '#groupInput', function(e) {
-    e.preventDefault();
-    var input = $(this).val().toUpperCase();
-    if (!input.length) {
-        $("#listResult").empty();
-        return;
-    } else {
-        $("#listResult").empty();
-        var query = {
-            sender: user.username,
-            name: input
-        }
-
-        socket.emit('search group', query, function(data) {
-
-            for (var i = 0; i < data.length; i++) {
-                $("#listResult").append('<li>' + data[i] + '</li>');
-
-            }
-        });
-    }
-});
-$('body').on('click', '#listResult li', function() {
-    $('#groupInput').val($(this).text());
-});
-$('body').on('click', '#searchGroup', function(e) {
-    e.preventDefault();
-    var input = $('#groupInput').val();
-    var info = {
-        name: input,
-        username: user.username
-    };
-    if (!input.length) return;
-    $('.total').remove();
-    socket.emit('get group info', info);
-
-});
-$('body').on('click', '.member-count a', function(e) {
-    var groupName = $('.group-name-info').html();
-
-    var groupMembers = [];
-    var unknownMembers = [];
-    for (var i = 0; i < searchGroupResult.members.length; i++) {
-        groupMembers.push(searchGroupResult.members[i]);
-        unknownMembers.push(searchGroupResult.members[i]);
-    }
-
-    var groupMembersList = $('<div class = "group-members-list"></div>');
-    var close = $('<div class = "groups-members-close"><i id = "closeGroupInfo" class = "fa fa-times"></i></div>');
-    groupMembersList.append(close);
-
-    var groupNameDiv = $('<div class = "group-member-groupName"></div>');
-    groupNameDiv.html(groupName);
-    groupMembersList.append(groupNameDiv);
-    var membersDiv = $('<div class = "members-list"></div>');
-    groupMembersList.append(membersDiv);
-    $('.total').append(groupMembersList);
-
-    var knownMembersInfo = [];
-    var knownMembers = [];
-
-
-    for (var i = 0; i < groupMembers.length; i++) {
-        if (groupMembers[i] === user.username) {
-            var index = i;
-            unknownMembers.splice(index, 1);
-            var personInfo = {
-                username: user.username,
-                name: user.profile.first_name + ' ' + user.profile.last_name,
-                avatar: user.profile.avatar,
-                relationship: 'Me',
-                online: true
-            }
-            knownMembersInfo.push(personInfo);
-            break;
-        }
-    }
-    //get known members 
-    for (var i = 0; i < groupMembers.length; i++) {
-        for (var j = 0; j < userList.length; j++) {
-            if (groupMembers[i] === userList[j].username) {
-                knownMembers.push(groupMembers[i]);
-            }
-        }
-    }
-
-    // get unknown members
-    for (var i = 0; i < knownMembers.length; i++) {
-        for (var j = 0; j < unknownMembers.length; j++) {
-            if (knownMembers[i] === unknownMembers[j]) {
-                unknownMembers.splice(j, 1);
-                break;
-            }
-        }
-    }
-    //get known members information
-    for (let i = 0; i < knownMembers.length; i++) {
-        var person = getPersonalInfo(knownMembers[i]);
-        var personInfo = {
-            username: person.username,
-            name: person.profile.first_name + ' ' + person.profile.last_name,
-            avatar: person.profile.avatar,
-            relationship: person.class,
-            online: person.online
-        }
-        knownMembersInfo.push(personInfo);
-    }
-    //list known members
-
-    if ((typeof knownMembersInfo != 'undefine') && knownMembersInfo.length > 0) {
-        for (var i = 0; i < knownMembersInfo.length; i++) {
-            listMembers(knownMembersInfo[i])
-        }
-    }
-    //get unknown members information
-    if ((typeof unknownMembers != 'undefine') && unknownMembers.length > 0) {
-
-        var info = {
-            sender: user.username,
-            unknownMembers: unknownMembers
-        };
-        socket.emit('getUnknownMembersInfo', info, function(membersInfo) {
-            for (var i = 0; i < membersInfo.length; i++) {
-                listMembers(membersInfo[i])
-            }
-        })
-    }
-});
-$('body').on('click', '.leave button', function() {
-    $('.total').remove();
-    members = null; //release the memory of members
-});
-$('body').on('click', '.join button', function() {
-    var groupName = $('.group-name-info').html();
-    var info = {
-        name: groupName,
-        username: user.username
-    }
-    $('.total').remove();
-    socket.emit('join group', info);
-    members = null;
-    playSound('sound/here-i-am.mp3');
-});
-$('body').on('click', '#closeGroupInfo', function() {
-    $('.group-members-list').remove();
-});
-$('body').on('click', '.member-list-invite button', function() {
-    var invitee = $(this).parent().parent().find('.member-list-username').html();
-    var inviteeName = $(this).parent().parent().find('.member-list-name').html();
-    $('.total').remove();
-    invitePeople(invitee, inviteeName);
-});
-
-/* invite someone to group events */
-
-$('body').on('click', '.groups-close .fa-times', function() {
-    $('.total').remove();
-});
-$('body').on('click', '.next button', function(e) {
-    e.preventDefault();
-    var targetGroup = $('input[name = "group"]:checked').attr('id').replace(/\"/g, "");
-    var groupInfo = getGroupInfo(targetGroup);
-    $('.groups').remove();
-    var selectUsersDiv = $('<div class = "select-users"></div>');
-    var closeDiv = $('<div class = "groups-close"><i class = "fa fa-times"></i></div>');
-    selectUsersDiv.append(closeDiv);
-    var p = $('<p>group "' + targetGroup + '" is selected, Please select user(s)</p>');
-    selectUsersDiv.append(p);
-    var selectAll = $('<div class = "select-all"><input type="checkbox" name = "selectAll" value = "selectAll" onclick = "checkBoxToggle(this)" />Select All</div>');
-    selectUsersDiv.append(selectAll);
-    var multiSelect = $('<div class="multiselect"></div>');
-    selectUsersDiv.append(multiSelect);
-    var invite = $('<div class = "invite-users"><button class = "btn btn-success">Invite</button></div>');
-    selectUsersDiv.append(invite);
-    var selectGroup = $('<div class = "hide"></div>');
-    selectGroup.html(targetGroup);
-    selectUsersDiv.append(selectGroup);
-    $('.total').append(selectUsersDiv);
-    var candidates = [];
-    var removeIndex = [];
-    /* remove the users who have joined this group*/
-    for (var i = 0; i < userList.length; i++) {
-        candidates.push(userList[i].username);
-    };
-
-    for (let i = 0; i < groupInfo.members.length; i++) {
-        for (var j = 0; j < candidates.length; j++) {
-            if (groupInfo.members[i] === candidates[j]) {
-                candidates.splice(j, 1)
-            }
-        }
-    }
-    for (let i = 0; i < candidates.length; i++) {
-        var person = getPersonalInfo(candidates[i]);
-        var name = person.profile.first_name + ' ' + person.profile.last_name;
-        var option = $('<input type="checkbox" name="selectUser" value="' + candidates[i] + '" onclick ="toggleAll(this)" class = "checkBox"/>' + name + '<br>');
-        $('.multiselect').append(option);
-    }
-
-});
-$('body').on('click', '.invite-users button', function() {
-    var targetGroup = $('.select-users .hide').html();
-    var selectedUsers = [];
-    var select = $('.checkBox:checked');
-    for (var i = 0; i < select.length; i++) {
-        selectedUsers.push(select[i].defaultValue);
-    }
-
-    var info = {
-        sender: user.username,
-        selectedUsers: selectedUsers,
-        targetGroup: targetGroup
-    }
-    $('.total').remove();
-    socket.emit('invite someone to group', info, function(result) {
-        if (result) {
-            var content = "You have send an invitation to " + selectedUsers.length + ' people';
-        }
-        popupOnlineNotice(content);
-
-    })
-});
-$('body').on('click', '#acceptGroupRequest', function() {
-
-    var group = $(this).parent().parent().find('.invite-group').html();
-    var info = {
-        name: group,
-        username: user.username
-    }
-    socket.emit('join group', info);
-    $(this).parent().parent().remove();
-    //popupOnlineNotice('You select joining group ' + group);
-});
-$('body').on('click', '#rejectGroupRequest', function() {
-    var group = $(this).parent().parent().find('.invite-group').html();
-    $(this).parent().parent().remove();
-    popupOnlineNotice('You decline to join the group ' + group);
-});
-/* group right click events*/
-$('body').on('contextmenu', '.group-info a', function(e) {
-    e.preventDefault();
-    var selectedGroup = $(this).attr('id');
-    $('#contextMenu2 .hide').html(selectedGroup);
-    $('#contextMenu2').css({
-        display: "block",
-        left: e.pageX,
-        top: e.pageY
-    });
-    var groupInfo = getGroupInfo(selectedGroup);
-    if (user.username != groupInfo.owner) {
-        $('#removeFromGroup').parent().show();
-        $('#removeGroup').parent().hide();
-
-    } else {
-        $('#removeFromGroup').parent().hide();
-        $('#removeGroup').parent().show();
-
-    }
-    return false;
-});
-$('#viewInfoGroup').on('click', function() {
-    var groupName = $(this).parent().parent().parent().find('.hide').html();
-
-    var info = {
-        username: user.username,
-        name: groupName
-    }
-    socket.emit('get group info', info);
-});
-$('#removeFromGroup').on('click', function() {
-    var groupName = $(this).parent().parent().parent().find('.hide').html();
-
-    var info = {
-        username: user.username,
-        groupName: groupName
-    }
-
-    socket.emit('withdraw from group', info);
-
-    var name = groupName.replace(/\s/g, '');
-    var divs = $('#' + name + 'Div');
-    divs.remove();
-    var index = groupList.indexOf(groupName);
-    groupList.splice(index, 1);
-    if (currentGroup === groupName) {
-        $('#chatWindow').attr('class', 'hide');
-        currentGroup = null;
-    }
-    popupOnlineNotice('You are withdrawn from group ' + groupName);
-
-});
-$('#removeGroup').on('click', function() {
-    var groupName = $(this).parent().parent().parent().find('.hide').html();
-    //check if user is the owner of this group
-    for (var i = 0; i < groupList.length; i++) {
-        if (groupList[i].name === groupName) {
-            if (groupList[i].owner != user.username) $.Zebra_Dialog('You are not owner of this group, so you have no right to remove this group', {
-                type: 'error',
-                title: 'Remove Group Error'
-            });
-            else {
-                var info = {
-                    owner: user.username,
-                    groupName: groupName
-                };
-                socket.emit('remove group', info);
-                if (currentGroup === groupName) {
-                    $('#chatWindow').attr('class', 'hide');
-                    currentGroup = null;
-                }
-            }
-        }
-    }
-});
-//send image
-$("body").on('click', '#submitImage', function(e) {
-    e.preventDefault();
-    if ($('#imageUpload').val() === "") return;
-    var imageData = $('#targetImg').attr('src');
-    if (imageData = null) return;
-    $('.total').remove();
-    var sendDate = new Date();
-    var day = sendDate.getDate();
-    var month = sendDate.getMonth() + 1;
-    var year = sendDate.getFullYear();
-    var hour = sendDate.getHours();
-    var minute = sendDate.getMinutes();
-    if (parseInt(minute) < 10) {
-        minute = '0' + minute.toString();
-
-    }
-    //var findIt = false;
-    if (interlocutor != null) {
-        var newMessage = {
-            type: 'image',
-            sender: user.username,
-            receiver: interlocutor,
-            content: imageData,
-            date: {
-                year: year,
-                month: month,
-                day: day,
-                hour: hour,
-                minute: minute
-            }
-        };
-        saveSendRecord(newMessage);
-        socket.emit('send message', newMessage);
-        displaySendMessage(newMessage);
-    } else {
-        if (currentGroup != null) {
-            var newMessage = {
-                type: 'image',
-                sender: user.username,
-                senderName: user.profile.first_name + ' ' + user.profile.last_name,
-                group: currentGroup,
-                content: imageData,
-                date: {
-                    year: year,
-                    month: month,
-                    day: day,
-                    hour: hour,
-                    minute: minute
-                }
-            };
-            savePublicSendRecord(newMessage);
-            displaySendMessage(newMessage);
-            socket.emit('send group message', newMessage);
-        }
-    }
-});
-$("body").on('click', '#cancelSubmit', function() {
-    $('.total').remove();
-});
-/* reply being a friend request events */
-
-$('body').on('click', '#acceptRequest', function(e) {
-    var inviter = $(this).parent().parent().find('.inviter').html();
-    var sendDate = new Date();
-    var day = sendDate.getDate();
-    var month = sendDate.getMonth() + 1;
-    var year = sendDate.getFullYear();
-    var reply = {
-        inviter: inviter,
-        invitee: user.username,
-        date: {
-            year: year,
-            month: month,
-            day: day
-        }
-    }
-    socket.emit('accept request', reply);
-    //$('.popup-request').remove();
-    $(this).parent().parent().remove();
-});
-
-$('body').on('click', '#rejectRequest', function(e) {
-    var inviter = $(this).parent().parent().find('.inviter').html();
-    var reply = {
-        inviter: inviter,
-        invitee: user.username
-    }
-    socket.emit('reject request', reply);
-    $('.popup-request').remove();
-});
-
-/* search people events */
-
-$('body').on('click', '.search-title .fa-times', function() {
-    $('.total').remove();
-});
-$('body').on('click', '#searchFriend', function(e) {
-    e.preventDefault();
-    var target = $('#people').val();
-    if (target === user.username) return;
-    else {
-        $('.search-function-bar').remove();
-        socket.emit('search people', target, function(result) {
-            if (!result) {
-                $('.total').remove();
-                $.Zebra_Dialog('Sorry, we can not find the people. Maybe the user name you typed is incorrect. Please try another user name', {
-                    type: 'error',
-                    title: 'find people error',
-                    buttons: [{ caption: 'OK' }]
-                })
-            } else {
-                //list the target information
-                var peopleDiv = $('<div class = "search-people-result"></div>');
-                var titleDiv = $('<h4></h4>');
-                var title = 'Result we found with user name ' + target;
-                titleDiv.html(title);
-                peopleDiv.append(titleDiv);
-                var targetDiv = $('<div class = "target-div"></div>');
-                targetDiv.html(target);
-                peopleDiv.append(targetDiv);
-                var infoDiv = $('<div class= "people-info"></div>');
-                peopleDiv.append(infoDiv);
-                var avatar = $('<img class = "people-avatar" />');
-                avatar.attr('src', result.avatar)
-                infoDiv.append(avatar);
-                var profileDiv = $('<div class = "people-profile"></div>');
-                infoDiv.append(profileDiv);
-                var nameDiv = $('<div class= "peopel-name"></div>');
-                nameDiv.html(result.name);
-                profileDiv.append(nameDiv);
-                var genderDiv = $('<div class = "people-gender"></div>');
-                genderDiv.html(result.gender)
-                profileDiv.append(genderDiv);
-                var locationDiv = $('<div class = "people-location"></div>');
-                if (result.location != null) locationDiv.html(result.location)
-                else locationDiv.html('location: unknown');
-                profileDiv.append(locationDiv);
-                var inviteDiv = $('<div class = "invite"><button id="invitePeople" class = "btn btn-success">Invite People</button></div>');
-                var cancelDiv = $('<div class = "cancel-invite"><button id = "cancelInvite" class = "btn btn-warning">Cancel</button></div>');
-                peopleDiv.append(inviteDiv);
-                peopleDiv.append(cancelDiv);
-
-                var totalDiv = $('<div class = "total"></div>');
-                var maskDiv = $('<div class = ".frosted-glass" ></div>');
-                maskDiv.append(peopleDiv);
-                totalDiv.append(maskDiv);
-                totalDiv.appendTo('body');
-
-            }
-
-        })
-    }
-
-});
-$('body').on('click', '#invitePeople', function(e) {
-    e.preventDefault();
-    var inviteeName = $('.peopel-name').html();
-    var invitee = $('.target-div').html();
-    $('.total').remove();
-    invitePeople(invitee, inviteeName);
-})
-$('body').on('click', '#cancelInvite', function() {
-    $('.total').remove();
-})
-
-/*  close online notcie event*/
-
-$('body').on('click', '.notice-close .fa-times', function(e) {
-    $(this).parent().parent().remove();
-});
-
-/*  media chat events  */
-
-//accept media chat request
-$('body').on('click', '#accept', function() {
-    var reply = {
-        sender: user.username,
-        receiver: $('#chater').html(),
-        useVideo: useVideo
-    }
-    $('.request-media-chat').remove();
-    if (videoChater != null || audioChater != null) { //if it is on video chat when receiving an incoming video chat request
-        $('.media-popup').remove(); //at first, current video chat should be removed if accept button was clicked
-
-        var receiver = videoChater != null ? videoChater : audioChater;
-        var disconnectVideoChat = {
-            sender: user.username,
-            receiver: receiver
-        }
-        socket.emit('disconnect media', disconnectVideoChat);
-        removeMedia(function(success) {
-            if (!success) { //if the old video chat can not be removed, decline the incoming video chat request
-                alert('system failed to disconnect current video chat');
-                socket.emit('request decline', reply);
-            }
-        });
-    }
-    setupLocalMedia(function() { //  a new video chat will be created, initializeing camera and audio device
-        socket.emit('receiver steam ok', reply);
-        $('.video').css('pointer-events', 'none');
-        $('.phone').css('pointer-events', 'none');
-
-    });
-
-});
-
-// decline media chat request
-$('body').on('click', '#decline', function() {
-    var reply = {
-        sender: user.username,
-        receiver: $('#chater').html(),
-        useVideo: useVideo
-    }
-    $('.request-media-chat').remove();
-    socket.emit('request decline', reply);
-});
-$('body').on('click', '#min', function() {
-    if (!minimize) {
-        var winHeight = $(document).height();
-        var top = winHeight - 40;
-        $('.media-popup').animate({
-            width: '650px',
-            height: '40px',
-            left: '0px',
-            top: top + 'px'
-
-        }, 200);
-        $('.media-header').animate({
-            width: ' 650px',
-            height: '40px',
-        }, 200);
-        $('tab3').css('padding-left', '10em');
-        $('tab3').css('padding-right', '5.5em');
-        $('.local-media').hide();
-        $('.remote-media').hide();
-        minimize = true;
-        maximize = false;
-        $('#max').css('pointer-events', 'auto');
-    } else {
-        return;
-    }
-});
-$('body').on('click', '#max', function() {
-    if (!minimize && !maximize) {
-
-        $('.media-popup').animate({
-            width: '100%',
-            height: '100%',
-            left: '0px',
-            top: '0px'
-        }, 200);
-        $('.local-media').animate({
-            width: '49%',
-            height: 'auto'
-        }, 200);
-        var width = $(document).width() / 2 - 10;
-        $('#localVideo').attr('width', width + 'px');
-        $('#localVideo').attr('height', 'auto');
-        $('.remote-media').animate({
-            width: '49%',
-            height: 'auto'
-        }, 200);
-        $('#remoteVideo').attr('width', width + 'px');
-        $('#remoteVideo').attr('height', 'auto');
-        var distance = $(document).width() - 288;
-        var paddingLeft = distance * 9 / 15.5;
-        var paddingRight = distance * 6.5 / 15.5;
-        $('tab3').css('padding-left', paddingLeft + 'px');
-        $('tab3').css('padding-right', paddingRight + 'px');
-        maximize = true;
-        minimize = false;
-    } else {
-        $('.local-media').show();
-        $('.remote-media').show();
-        $('.media-popup').animate({
-            width: '650px',
-            height: '290px',
-            left: '10px',
-            top: '10px'
-        }, 200);
-        $('.local-media').animate({
-            width: '320px',
-            height: '240px'
-
-        }, 200);
-        $('.remote-media').animate({
-            width: '320px',
-            height: '240px'
-        }, 200);
-        $('#localVideo').attr('width', 'auto');
-        $('#localVideo').attr('height', '240px');
-        $('#remoteVideo').attr('width', 'auto');
-        $('#remoteVideo').attr('height', '240px');
-        $('tab3').css('padding-left', '10em');
-        $('tab3').css('padding-right', '5.5em');
-        maximize = false;
-        minimize = false;
-        if (audioChater != null) $('#max').css('pointer-events', 'none');
-    }
-});
-
-//move media chat window
-$('body').on('mousedown', '.media-header', function(e) {
-    $(this).css("cursor", "move"); //change mouse shape
-    var offset = $(this).offset(); //get the position of div 
-    var x = e.pageX - offset.left; //get the distance between mouse and the left of div
-    var y = e.pageY - offset.top; //get the distance between mouse and the top of div 
-    $(document).bind("mousemove", function(ev) { //bind the mouse move event
-
-        $(".media-popup").stop();
-
-        var _x = ev.pageX - x; //get the move offset value in x axis 
-        var _y = ev.pageY - y; //get the move offset value in y axis
-
-        $(".media-popup").animate({ left: _x + "px", top: _y + "px" }, 10);
-    });
-    $(document).mouseup(function() {
-        $(".media-popup").css("cursor", "default");
-        $(this).unbind("mousemove");
-    });
-});
-$('body').on('mousemove', '.media-title', function(e) {
-    $(this).css("cursor", "pointer");
-    $(this).css("color", "yellow");
-});
-$('body').on('mouseleave', '.media-title', function(e) {
-
-    $(this).css("color", "dimgray");
-});
-$('body').on('click', '#disconnectVideo', function() {
-    $.Zebra_Dialog('Do you want to end up this video chat?', {
-        type: 'question',
-        title: 'Question',
-        buttons: [{
-            caption: 'OK',
-            callback: exitMediaChat
-        }, { caption: 'Cancel' }]
-    })
-});
-
-/* take snapshot events */
-
-$('body').on('mouseover', '.closeSnapshot .fa-times', function() {
-    $(this).css('cursor', 'pointer');
-    $(this).css('color', 'yellow');
-});
-$('body').on('mouseleave', '.closeSnapshot .fa-times', function() {
-
-    $(this).css('color', 'snow');
-});
-$('body').on('click', '.closeSnapshot .fa-times', function() {
-    $(this).parent().parent().remove();
-    snapImgOffset -= 10;
-});
-
-/* friend list left click event */
-
-$('body').on('click', '.contacts-info a', function() {
-    interlocutor = $(this).attr('id');
-    $('.friend-bar span').html('');
-    $('#chatList').empty(); //clear chat list
-
-    for (var x in userList) {
-        if (userList[x].username === interlocutor) {
-
-            $('.friend-img').attr('src', userList[x].profile.avatar);
-            $('#friendName').html(userList[x].profile.first_name + " " + userList[x].profile.last_name);
-            $('#chatWindow').attr('class', 'chat-window');
-            $('#chatWindow').show();
-            if (!userList[x].online || audioChater != null) {
-
-                $('.snapshot').css('pointer-events', 'none');
-                $('.video').css('pointer-events', 'none');
-                $('.phone').css('pointer-events', 'none');
-            } else {
-                if (videoChater != null && videoChater === interlocutor) {
-                    $('.snapshot').css('pointer-events', 'auto');
-                    $('.video').css('pointer-events', 'none');
-                    $('.phone').css('pointer-events', 'none');
-                } else if (videoChater != null && videoChater != interlocutor) {
-                    $('.snapshot').css('pointer-events', 'none');
-                    $('.video').css('pointer-events', 'none');
-                    $('.phone').css('pointer-events', 'none');
-                } else {
-
-                    $('.snapshot').css('pointer-events', 'none');
-                    $('.video').css('pointer-events', 'auto');
-                    $('.phone').css('pointer-events', 'auto');
-                }
-
-            }
-            for (var i in privateMessageList) {
-
-                if (privateMessageList[i].friend === interlocutor) {
-
-                    for (var m in privateMessageList[i].message) {
-
-                        var chatItem, chatDiv, symbol;
-                        var sentByFriend = privateMessageList[i].message[m].sender == interlocutor;
-                        var currentMessage = privateMessageList[i].message[m];
-                        if (sentByFriend) displayReceiveMessage(currentMessage);
-                        else displaySendMessage(currentMessage);
-                    }
-
-                    count = parseInt(count) - parseInt(privateMessageList[i].count);
-                    privateMessageList[i].count = 0;
-                    //clear the interlocutor messages in notification
-                    $('#' + interlocutor + 'Div').find('.new-message').html('');
-                    $('#' + interlocutor + 'Div').find('.latest-message').html('');
-                    if (count <= 0) {
-                        $('#noteMsg').css('color', 'lightgray');
-                        $('#notificationCount').html('');
-                    } else {
-                        $('#notificationCount').html(count);
-                    }
-                    notificationList = notificationList.filter(function(item) {
-                        return item.sender != interlocutor; //clear interlocutor's notices
-                    })
-                }
-            }
-            return;
-        }
-    }
-});
-
-/* friend list right click event */
-$('body').on('contextmenu', '.contacts-info a', function(e) {
-    var contact = $(this).attr('id');
-    $('#contextMenu .hide').html(contact);
-    $('#contextMenu').css({
-        display: "block",
-        left: e.pageX,
-        top: e.pageY
-    });
-    return false;
-});
-
-/* html click event*/
-$('html').click(function() {
-    $('#contextMenu').hide();
-    $('#contextMenu2').hide();
-    $('#contextMenuInput').hide();
-    $('#liContext').remove();
-    $('.li-contextmenu').remove();
-});
-/* relationship change events */
-$('#changeRelationship').on('click', function() {
-    var contacter = $(this).parent().parent().parent().find('.hide').html();
-    var person = getPersonalInfo(contacter);
-    var selectRelationDiv = $('<div class = "select-relation"></div>');
-    var titleDiv = $('<div class = "relation-title-div"><i class = "fa fa-times"></i></div>');
-    var targetDiv = $('<div class = "hide"></div>');
-    targetDiv.html(contacter);
-    selectRelationDiv.append(targetDiv);
-    var title = $('<h5></h5>');
-    var titleContent = 'Please select one of the following relationship for ';
-    title.html(titleContent);
-    var span = $('<span class = "relation-target"></span>');
-    span.html(person.profile.first_name + ' ' + person.profile.last_name);
-    title.append(span);
-    selectRelationDiv.append(titleDiv);
-    selectRelationDiv.append(title);
-
-    var formDiv = $('<form></form>');
-    selectRelationDiv.append(formDiv);
-    var checkBox = $('<input type = "radio" name = "relationship" value = "family">Family</input>' + '<br>' +
-        '<input type = "radio" name = "relationship" value = "friend">Friend</input>' + '<br>' +
-        '<input type = "radio" name = "relationship" value = "classmate">Classmate</input>' + '<br>' +
-        '<input type = "radio"  name = "relationship" value = "colleague">Colleague</input>' + '<br>' +
-        '<input type = "radio"  name = "relationship" value = "business">Bussiness</input>');
-    formDiv.append(checkBox);
-    var confirmDiv = $('<div class = "confirm-relation"><button class = "btn btn-success">Confirm</button></div>');
-    formDiv.append(confirmDiv);
-    var totalDiv = $('<div class = "total"></div>');
-    totalDiv.append(selectRelationDiv);
-    totalDiv.appendTo('body');
-
-});
-$('body').on('click', '.relation-title-div .fa-times', function() {
-    $('.total').remove();
-});
-$('body').on('click', '.profile-button button', function() {
-    $('.total').remove();
-})
-$('body').on('click', '.confirm-relation button', function(e) {
-    e.preventDefault();
-    var target = $('.select-relation .hide').html();
-    var relationship = $('input[name = "relationship"]:checked').val();
-
-    var targetName = $('.relation-target').html();
-    var info = {
-        sender: user.username,
-        target: target,
-        relationship: relationship
-    }
-    socket.emit('change relationship', info);
-    $('.total').remove();
-    for (var i = 0; i < userList.length; i++) {
-        if (userList[i].username === target) {
-            userList[i].class = relationship;
-            break;
-        }
-    }
-    var filter = $('.droplist tab1').html();
-    if (filter != 'All') $('#' + target + 'Div').remove(); //if contact display filter is not all, remove this contact from contact list
-    var content = "You add " + targetName + ' to your ' + relationship;
-    popupOnlineNotice(content);
-
-
-});
-$('#viewInfo').on('click', function() {
-    var contacter = $(this).parent().parent().parent().find('.hide').html();
-    var person = getPersonalInfo(contacter);
-    uploadProfile(person);
-});
-$('body').on('click', '.contect-profile-title .fa-times', function() {
-    $('.total').remove();
-});
-/*contacter remove events */
-$('#removeConnection').on('click', function() {
-    var contacter = $(this).parent().parent().parent().find('.hide').html();
-    var person = getPersonalInfo(contacter);
-    var contactName = person.profile.first_name + ' ' + person.profile.last_name;
-    var removeConnectionDiv = $('<div class = "remove-connection-div"></div>');
-    var targetDiv = $('<div class = "hide"></div>');
-    targetDiv.html(contacter);
-    removeConnectionDiv.append(targetDiv);
-    var content = $('<h5></h5>');
-    var text = "Are you sure to remove " + contactName + ' from your contact list'
-    content.html(text);
-    removeConnectionDiv.append(content);
-    var confirmDiv = $('<div class = "confirm-contact-remove"><button class = "btn btn-danger">Confirm</button></div>');
-    removeConnectionDiv.append(confirmDiv);
-    var cancelDiv = $('<div class = "cancel-contact-remove"><button class = "btn btn-success">Cancel</button></div>');
-    removeConnectionDiv.append(cancelDiv);
-    var total = $('<div class = "total"></div>');
-    total.append(removeConnectionDiv);
-    total.appendTo('body');
-});
-$('body').on('click', '.cancel-contact-remove button', function() {
-    $('.total').remove();
-});
-$('body').on('click', '.confirm-contact-remove', function() {
-    var contacter = $('.remove-connection-div .hide').html();
-    var info = {
-        sender: user.username,
-        target: contacter
-    }
-    socket.emit('remove contacter', info);
-    $('.total').remove();
-});
-/* update profile avatar */
-$("body").on('click', '#send', function(e) {
-    e.preventDefault();
-    basic.croppie('result', {
-        type: 'canvas',
-        size: 'viewport'
-    }).then(function(data) {
-        if (!$('#avatar').val()) {
-            $('#error-message').html('You did not select a file');
-            $('#error-message').attr('class', 'error-message');
-            return;
-        }
-        var message = {
-            sender: user.username,
-            receivers: onlineFriends,
-            avatar: data
-        }
-
-        socket.emit('update avatar', message);
-        $('#totalDiv').remove();
-        basic = null;
-    })
-});
-$("body").on('click', '#cancel', function() {
-    $('#totalDiv').remove();
-});
-
-/*  enlarge image events */
-
-$('body').on('click', '.image-frame-left', enlargeImg);
-$('body').on('click', '.image-frame-right', enlargeImg);
-
-//close enlargeImg 
-$('body').on('click', '.close', function() {
-    change = false;
-    $('.total').remove();
-});
-//scale-up event
-$('body').on('click', '#magnify', function() {
-
-    if (parseInt($('#range').val()) >= 175) { //set max scale rate ti 175%
-        return;
-    } else {
-        if (!change) {
-            oldWidth = $('#fullImage').width();
-            oldHeight = $('#fullImage').height();
-            change = true;
-        }
-
-        $('#range').val(parseInt($('#range').val()) + 25);
-        var newWidth = oldWidth * parseInt($('#range').val()) / 100;
-        var newHeight = oldHeight * parseInt($('#range').val()) / 100;
-
-        $('#fullImage').css('width', newWidth);
-        $('#fullImage').css('height', newHeight);
-        $('.factor h3').html($('#range').val() + '%');
-    }
-
-});
-//scale-down event
-$('body').on('click', '#minify', function() {
-
-    if (parseInt($('#range').val()) <= 25) { //set min scale rate to 25%
-        return;
-    } else {
-        if (!change) {
-            oldWidth = $('#fullImage').width();
-            oldHeight = $('#fullImage').height();
-            change = true;
-        }
-        $('#range').val(parseInt($('#range').val()) - 25);
-        var newWidth = oldWidth * parseInt($('#range').val()) / 100;
-        var newHeight = oldHeight * parseInt($('#range').val()) / 100;
-        $('#fullImage').css('width', newWidth);
-        $('#fullImage').css('height', newHeight);
-        $('.factor h3').html($('#range').val() + '%');
-    }
-
-});
-//scale range bar event
-$('body').on('change', '#range', changeSize);
-
-
-/*  file attachement events */
-
-//clicking the submit button event on file attachement form
-$("body").on('click', '#submitFiles', function(e) {
-    e.preventDefault();
-    var receiver = interlocutor != null ? interlocutor : currentGroup;
-    var files = $('#myFiles').prop('files');
-
-    //remove file attachement form
-    $('.total').remove();
-    newFileUploadAvailable = false;
-    //disable file attachement button when filea are uploading to server
-    if (toggleFloatInput) $('#fileAttachement2').css('pointer-events', 'none');
-    else $('#fileAttachement').css('pointer-events', 'none');
-
-    //create a div to display file upload progress status
-    var progressUploadDiv = $('<div class = "file-upload-status"><h5></h5><ul class = "file-upload-list"></ul></div>');
-    $('.chat-interface').append(progressUploadDiv);
-    if (interlocutor != null) {
-        for (var x in userList) {
-            if (userList[x].username === receiver) {
-                $('.file-upload-status').find('h5').html('Sending files to ' + userList[x].profile.first_name + ' ' + userList[x].profile.last_name);
-            }
-        }
-    } else {
-        $('.file-upload-status').find('h5').html('Sending files to group ' + currentGroup);
-    }
-
-
-    for (var i = 0; i < files.length; i++) {
-
-        var li = $('<li class = "upload-item"></li>');
-        li.attr('id', receiver + i);
-        li.html(files[i].name);
-        var progressDiv = $('<div class = "progress"></div>');
-        var barDiv = $('<div class="bar"></div>');
-        progressDiv.append(barDiv);
-        var percentDiv = $('<div class="percent">0%</div>');
-        progressDiv.append(percentDiv);
-        li.append(progressDiv);
-        $('.file-upload-list').append(li);
-        var progressId = receiver + i;
-        var data = new FormData();
-        data.append('sender', user.username);
-        data.append('senderName', user.profile.first_name + ' ' + user.profile.last_name);
-        data.append('groupName', currentGroup);
-        data.append('receiver', receiver);
-        data.append('progressId', progressId);
-        data.append('file', files[i]);
-
-        // XMLHttpRequest Object
-        var xhr = new XMLHttpRequest();
-        xhr.upload.li = li;
-        xhr.upload.div = progressUploadDiv;
-        xhr.open('post', 'user/sendFile', true);
-        xhr.upload.addEventListener('progress', function(evt) {
-            var percentage = Math.round(evt.loaded / evt.total * 100).toFixed(2) + '%';
-            this.li.find('.percent').html(percentage);
-            this.li.find('.bar').width(percentage);
-
-        }, false);
-        xhr.send(data);
-    }
-});
-$('body').on('click', '#closeFileUpload', function() {
-    $('.total').remove();
-});
-
-/*  Edit profile events */
-
-$('body').on('click', '#homeLink', function() {
-    $('#totalDiv').remove();
-    //location.reload();
-});
-$('body').on('click', '#saveProfile', function() {
-    if (!$('#firstname').val() || !$('#lastname').val()) return;
-    $.post('/user/saveProfile', $('#profileForm').serialize(), function(result) {
-        $('.user-info').html(result.first_name + " " + result.last_name);
-        $('.location').html(result.location.city + "." + result.location.province + "<br>" + result.location.postal_code + " " + result.location.country_code);
-        user.profile = result;
-        $('#taskDiv').find('input, textarea, button, select').attr('disabled', 'disabled');
-        $('a').on('click.myDisable', function() { return false; });
-
-        $.Zebra_Dialog('Profile information was saved successfully, please click OK to exit', {
-            type: 'confirmation',
-            title: 'Success Information',
-            buttons: [
-                { caption: 'OK', callback: exitProfile }
-
-            ],
-            onClose: exitProfile
-        });
-    })
-});
-$('body').on('click', '#profileLink', function() {
-    $('.task-title').find('h2').html('Genetal Settings');
-    $('#passwordForm').attr('class', 'hidden');
-    $('#profileForm').attr('class', 'profile-form');
-    $('#profileForm').validator();
-});
-$('body').on('click', '#passwordLink', function() {
-    $('.task-title').find('h2').html('Change Password');
-    $('#profileForm').attr('class', 'hidden');
-    $('#passwordForm').attr('class', 'password-form');
-    $('#passwordForm').validator();
-});
-$('body').on('click', '#savePassword', function() {
-    if (($('#valid_oldpass').text() != 'Minimum of 6 characters') || ($('#valid_newpass').text() != 'Minimum of 6 characters') || ($('#confirm_pass').text() != ""))
-        return;
-    $.post('/user/changePassword', $('#passwordForm').serialize(), function(result) {
-        //$('#taskDiv').find('input, textarea, button, select').attr('disabled', 'disabled');
-        //$('a').on('click.myDisable', function() { return false; });
-        if (result === "OK") {
-            $.Zebra_Dialog('Password was changed successfully, please click OK to exit and log in', {
-                type: 'confirmation',
-                title: 'Success Information',
-                buttons: [
-                    { caption: 'OK', callback: logout }
-
-                ],
-                onClose: logout
-            });
-        } else {
-            $.Zebra_Dialog('Old password is incorrect, please click Return to exit and try again', {
-                type: 'error',
-                title: 'Error Information',
-                buttons: ['Return']
-
-            });
+            $('#historyList li:eq(0)').before('<li class = "data-end">----------End----------</li>');
+            historyEnd = true;
         }
     })
 });
@@ -2209,9 +2171,133 @@ function insertAtCaret(areaId, text) {
         txtarea.selectionEnd = strPos;
         txtarea.focus();
     }
-
     txtarea.scrollTop = scrollPos;
 };
+
+function displayPublicChatWindow() {
+    $('.friend-bar span').html('');
+    $('#chatList').empty(); //clear chat list
+    $('.history-chatter').html('');
+    $('#historyList').empty();
+    $('#chatHistory').hide();
+    displayCacheData = [];
+    currentDate = null;
+    for (var x in groupList) {
+        if (groupList[x].name === currentGroup) {
+
+            $('.friend-img').attr('src', groupList[x].avatar);
+            $('#friendName').html(groupList[x].name);
+            $('#chatWindow').attr('class', 'chat-window');
+            $('#chatWindow').show();
+            $('.snapshot').css('pointer-events', 'none');
+            $('.video').css('pointer-events', 'none');
+            $('.phone').css('pointer-events', 'none');
+
+            for (var i in publicMessageList) {
+                if (publicMessageList[i].group === currentGroup) {
+                    for (var m in publicMessageList[i].message) {
+                        var chatItem, chatDiv, symbol;
+                        var sentByMe = publicMessageList[i].message[m].sender === user.username;
+                        var currentMessage = publicMessageList[i].message[m];
+                        if (!sentByMe) displayPublicReceiveMsg(currentMessage);
+                        else displaySendMessage(currentMessage);
+                    }
+                    count = parseInt(count) - parseInt(publicMessageList[i].count);
+                    publicMessageList[i].count = 0;
+                    //clear the current group messages in notification
+                    $('#' + currentGroup.replace(/\s/g, '') + 'Div').find('.new-message').html('');
+                    $('#' + currentGroup.replace(/\s/g, '') + 'Div').find('.latest-message').html('');
+                    if (count <= 0) {
+                        $('#noteMsg').css('color', 'lightgray');
+                        $('#notificationCount').html('');
+                    } else {
+                        $('#notificationCount').html(count);
+                    }
+                    notificationList = notificationList.filter(function(item) {
+                        return item.group != currentGroup; //clear current group's notices
+                    })
+                }
+            }
+            return;
+        }
+    }
+};
+
+function displayPrivateChatWindow() {
+
+    $('.friend-bar span').html('');
+    $('#chatList').empty(); //clear chat list
+    currentDate = null;
+    $('.history-chatter').html('');
+    $('#historyList').empty();
+    $('#chatHistory').hide();
+    displayCacheData = [];
+    for (var x in userList) {
+        if (userList[x].username === interlocutor) {
+
+            $('.friend-img').attr('src', userList[x].profile.avatar);
+            $('#friendName').html(userList[x].profile.first_name + " " + userList[x].profile.last_name);
+            $('#chatWindow').attr('class', 'chat-window');
+            $('#chatWindow').show();
+
+            if (!userList[x].online || audioChater != null) {
+
+                $('.snapshot').css('pointer-events', 'none');
+                $('.video').css('pointer-events', 'none');
+                $('.phone').css('pointer-events', 'none');
+            } else {
+                if (videoChater != null && videoChater === interlocutor) {
+                    $('.snapshot').css('pointer-events', 'auto');
+                    $('.video').css('pointer-events', 'none');
+                    $('.phone').css('pointer-events', 'none');
+                } else if (videoChater != null && videoChater != interlocutor) {
+                    $('.snapshot').css('pointer-events', 'none');
+                    $('.video').css('pointer-events', 'none');
+                    $('.phone').css('pointer-events', 'none');
+                } else {
+
+                    $('.snapshot').css('pointer-events', 'none');
+                    $('.video').css('pointer-events', 'auto');
+                    $('.phone').css('pointer-events', 'auto');
+                }
+
+            }
+            for (var i in privateMessageList) {
+                if (privateMessageList[i].friend === interlocutor) {
+                    for (var m in privateMessageList[i].message) {
+                        var chatItem, chatDiv, symbol;
+                        var sentByFriend = privateMessageList[i].message[m].sender == interlocutor;
+                        var currentMessage = privateMessageList[i].message[m];
+                        if (sentByFriend) displayReceiveMessage(currentMessage);
+                        else displaySendMessage(currentMessage);
+                    }
+
+                    count = parseInt(count) - parseInt(privateMessageList[i].count);
+                    privateMessageList[i].count = 0;
+                    //clear the interlocutor messages in notification
+                    $('#' + interlocutor + 'Div').find('.new-message').html('');
+                    $('#' + interlocutor + 'Div').find('.latest-message').html('');
+                    if (count <= 0) {
+                        $('#noteMsg').css('color', 'lightgray');
+                        $('#notificationCount').html('');
+                    } else {
+                        $('#notificationCount').html(count);
+                    }
+                    notificationList = notificationList.filter(function(item) {
+                        return item.sender != interlocutor; //clear interlocutor's notices
+                    })
+                }
+            }
+            return;
+        }
+    }
+};
+
+function displayNoMessage(name) {
+    $('.history-chatter').html(name);
+    $('#historyList').append('<li class = "no-data">No Data</li>');
+    $('#chatHistory').show();
+}
 
 function displayPrivateChatHistory(username, readCache, isInsert) {
     var person = getPersonalInfo(username);
@@ -2280,12 +2366,12 @@ function displayPublicReceiveHis(message, sender, isInsert, lastInsertItem) {
         }
     }
     var chatItem, hint;
-    chatItem = $('<li class="chat-item right"></li>');
+    chatItem = $('<li class="chat-item left"></li>');
     var dateDiv = $('<div class = "send-date"></div>');
     if (lastInsertItem) dateDiv.html(message.date.day + '-' + message.date.month + '-' + message.date.year);
     else dateDiv.html(messageDate);
     chatItem.append(dateDiv);
-    var chatDiv = $('<div class ="avatar-info-right"></div>');
+    var chatDiv = $('<div class ="avatar-info-left"></div>');
     chatItem.append(chatDiv);
     var senderAvatar = $('<img class="chat-avatar">');
     senderAvatar.attr('src', sender.profile.avatar);
@@ -2294,12 +2380,15 @@ function displayPublicReceiveHis(message, sender, isInsert, lastInsertItem) {
     var time = message.date.hour + ':' + message.date.minute;
     timeDiv.html(time);
     chatDiv.append(timeDiv);
+    var senderDiv = $('<div class = "group-sender-name"></div>');
+    senderDiv.html(sender.profile.first_name + ' ' + sender.profile.last_name);
+    chatItem.append(senderDiv);
     if (message.type === 'image') {
         var imgDiv = $('<div></div>');
         var imgLink = $('<a href = "#"></a>');
         imgLink.attr('id', sender.username + message.date.time + message.date.day + message.date.month + message.date.year);
         imgDiv.append(imgLink);
-        var imgTag = $('<img class = "image-frame-right">');
+        var imgTag = $('<img class = "image-frame-left">');
         if (message.content === null) {
             imgTag.attr('src', 'img/no-image.jpg');
         } else {
@@ -2318,7 +2407,7 @@ function displayPublicReceiveHis(message, sender, isInsert, lastInsertItem) {
 
         chatItem.append(contentDiv);
         var chatContent = $('<div class ="chat-content"></div>');
-        if (message.type === 'text') {
+        if (message.type === 'text' || message.type === 'group_text') {
 
             var textContent = replaceURLWithHTMLLinks(message.content);
             chatContent.html(textContent);
@@ -2331,7 +2420,7 @@ function displayPublicReceiveHis(message, sender, isInsert, lastInsertItem) {
             preText.append(fileLink);
         }
         contentDiv.append(chatContent);
-        var symbol = $('<span class="cell cell-7"></span>');
+        var symbol = $('<span class="cell cell-5"></span>');
         contentDiv.append(symbol);
     }
     if (isInsert) $('#historyList li:eq(0)').before(chatItem)
@@ -2358,12 +2447,12 @@ function displayReceiveHistory(message, isInsert, lastInsertItem) {
     var sender = getPersonalInfo(message.sender);
 
     var chatItem, hint;
-    chatItem = $('<li class="chat-item right"></li>');
+    chatItem = $('<li class="chat-item left"></li>');
     var dateDiv = $('<div class = "send-date"></div>');
     if (lastInsertItem) dateDiv.html(message.date.day + '-' + message.date.month + '-' + message.date.year);
     else dateDiv.html(messageDate);
     chatItem.append(dateDiv);
-    var chatDiv = $('<div class ="avatar-info-right"></div>');
+    var chatDiv = $('<div class ="avatar-info-left"></div>');
     chatItem.append(chatDiv);
     var senderAvatar = $('<img class="chat-avatar">');
     senderAvatar.attr('src', sender.profile.avatar);
@@ -2377,7 +2466,7 @@ function displayReceiveHistory(message, isInsert, lastInsertItem) {
         var imgLink = $('<a href = "#"></a>');
         imgLink.attr('id', sender.username + message.date.time + message.date.day + message.date.month + message.date.year);
         imgDiv.append(imgLink);
-        var imgTag = $('<img class = "image-frame-right">');
+        var imgTag = $('<img class = "image-frame-left">');
         if (message.content === null) {
             imgTag.attr('src', 'img/no-image.jpg');
         } else {
@@ -2409,7 +2498,7 @@ function displayReceiveHistory(message, isInsert, lastInsertItem) {
             preText.append(fileLink);
         }
         contentDiv.append(chatContent);
-        var symbol = $('<span class="cell cell-7"></span>');
+        var symbol = $('<span class="cell cell-5"></span>');
         contentDiv.append(symbol);
     }
     if (isInsert) $('#historyList li:eq(0)').before(chatItem)
@@ -2436,12 +2525,12 @@ function displaySendHistory(newMessage, isInsert, lastInsertItem) {
         }
     }
     var chatItem;
-    chatItem = $('<li class="chat-item left"></li>');
+    chatItem = $('<li class="chat-item right"></li>');
     var dateDiv = $('<div class = "send-date"></div>');
     if (lastInsertItem) dateDiv.html(newMessage.date.day + '-' + newMessage.date.month + '-' + newMessage.date.year);
     else dateDiv.html(messageDate);
     chatItem.append(dateDiv);
-    var chatDiv = $('<div class ="avatar-info-left"></div>');
+    var chatDiv = $('<div class ="avatar-info-right"></div>');
     chatItem.append(chatDiv);
     var senderAvatar = $('<img class="chat-avatar">');
     senderAvatar.attr('src', user.profile.avatar);
@@ -2457,7 +2546,7 @@ function displaySendHistory(newMessage, isInsert, lastInsertItem) {
         var imgLink = $('<a href = "#"></a>');
         imgLink.attr('id', user.username + newMessage.date.time + newMessage.date.day + newMessage.date.month + newMessage.date.year);
         imgDiv.append(imgLink);
-        var imgTag = $('<img class = "image-frame-left">');
+        var imgTag = $('<img class = "image-frame-right">');
         if (newMessage.content === null)
             imgTag.attr('src', 'img/no-image.jpg');
         else
@@ -2493,7 +2582,7 @@ function displaySendHistory(newMessage, isInsert, lastInsertItem) {
             preText.append(fileLink);
         }
         contentDiv.append(chatContent);
-        var symbol = $('<span class="cell cell-5"></span>');
+        var symbol = $('<span class="cell cell-7"></span>');
         contentDiv.append(symbol);
     }
     if (isInsert) $('#historyList li:eq(0)').before(chatItem)
@@ -2505,40 +2594,31 @@ function displaySendHistory(newMessage, isInsert, lastInsertItem) {
 function getTenRecords(result, callback) {
     // get 10 recoreds everytime until no record
     var readCache = [];
-    for (var i = 0; i < result.length; i++) {
-        if ((currentReadId - i) >= 0) {
-            var tempData = result[currentReadId - i];
-            console.log(i);
-            // console.log(tempData)
-            if (readCache.length != 0) {
-                var cloneChache = [];
-                for (var j = 0; j < readCache.length; j++) {
-                    cloneChache.push(readCache[j]);
-                }
-                readCache = [];
-                for (var j = 0; j < tempData.message.length; j++) {
-                    readCache.push(tempData.message[j])
-                }
-                for (var j = 0; j < cloneChache.length; j++) {
-                    readCache.push(cloneChache[j])
-                }
-            } else {
-                for (var j = 0; j < tempData.message.length; j++) {
-                    readCache.push(tempData.message[j])
-                }
+    // console.log(result)
+
+    var getDataLength = currentReadId;
+    var checkLength = (getDataLength - 10 > 0) ? 10 : getDataLength + 1;
+    // console.log('check length: ' + checkLength);
+    //  console.log('data length: ' + getDataLength);
+    for (var i = 0; i < checkLength; i++) {
+        var tempData = result[getDataLength - i];
+        //  console.log(tempData)
+        if (readCache.length != 0) {
+            var cloneChache = [];
+            for (var j = 0; j < readCache.length; j++) {
+                cloneChache.push(readCache[j]);
             }
-            if (readCache.length >= 10) {
-                if (currentReadId) currentReadId -= i + 1;
-                else currentReadId = -1;
-                console.log(readCache);
-                console.log('current read id: ' + currentReadId);
-                break;
+            readCache = [];
+            readCache.push(tempData);
+            for (var j = 0; j < cloneChache.length; j++) {
+                readCache.push(cloneChache[j])
             }
         } else {
-            currentReadId = -1;
-            break;
-        }
+            readCache.push(tempData);
 
+        }
+        currentReadId--;
+        //console.log('current read id: ' + currentReadId)
     }
     if (callback) callback(readCache);
 };
@@ -2552,29 +2632,38 @@ function pauseEvent(e) {
 };
 
 function readPrivateChatHistory(id, callback) {
-    var saveKey = 'privateChat' + user.username + id;
-    var buffer = JSON.parse(localStorage.getItem(saveKey));
+    var readKey = 'privateChat' + user.username + id;
+    var buffer = JSON.parse(localStorage.getItem(readKey));
     if (callback) callback(buffer);
 };
 
 function readPublicChatHistory(id, callback) {
-    var saveKey = 'chatPublic' + user.username + id;
-    var buffer = JSON.parse(localStorage.getItem(saveKey));
+    var readKey = 'chatPublic' + user.username + id;
+    var buffer = JSON.parse(localStorage.getItem(readKey));
     if (callback) callback(buffer);
 };
 
 function savePrivateChatToLocal(id, records, callback) {
     var currentPrivateChatKey = 'privateChat' + user.username + id;
     var currentPrivateChatHistory = JSON.stringify(records);
-    localStorage.setItem(currentPrivateChatKey, currentPrivateChatHistory);
-    if (callback) callback();
+    try {
+        localStorage.setItem(currentPrivateChatKey, currentPrivateChatHistory);
+        if (callback) callback('success');
+    } catch (e) {
+        if (callback) callback('no space');
+    }
 };
 
 function savePublicChatToLocal(id, records, callback) {
     var currentPublicChatKey = 'chatPublic' + user.username + id;
     var currentPublicChatHistory = JSON.stringify(records);
-    localStorage.setItem(currentPublicChatKey, currentPublicChatHistory);
-    if (callback) callback();
+    try {
+        localStorage.setItem(currentPublicChatKey, currentPublicChatHistory);
+        if (callback) callback('success');
+    } catch (e) {
+        console.log(e);
+        if (callback) callback('no space');
+    }
 };
 
 function updateScrollUp(username) {
@@ -3032,8 +3121,8 @@ function editProfile() {
     navBar.append(homeLink);
 
     var taskTitle = $('<div class = "task-title"><h2>General Settings</h2></div>');
-    var profileForm = $('<form autocomplete="off" id = "profileForm" class = "profile-form" role="form"></form>');
-    var passwordForm = $('<form autocomplete="off" id = "passwordForm" class="passowrd-form hide" role="form"></form>');
+    var profileForm = $('<form autocomplete="off" id = "profileForm" class = "profile-form" role="form" action=""></form>');
+    var passwordForm = $('<form autocomplete="off" id = "passwordForm" class="passowrd-form hide" role="form" action = ""></form>');
     taskDiv.append(taskTitle);
     taskDiv.append(profileForm);
     taskDiv.append(passwordForm);
@@ -3086,6 +3175,9 @@ function editProfile() {
     totalDiv.append(profileDiv);
     totalDiv.appendTo('body');
     //$('.profile-link').attr('tabindex', 0);
+    if (videoChater != null || audioChater != null) {
+        $('#passwordLink').css('pointer-events', 'none');
+    }
     $('#profileLink').focus();
     $('#profilePhoto').attr('src', user.profile.avatar);
     $('.user-info').html(user.profile.first_name + " " + user.profile.last_name);
@@ -3211,22 +3303,16 @@ function getGroupInfo(name) {
 
 function saveSendRecord(newMessage) {
     var findIt = false;
+    var cloneMessage = $.extend({}, newMessage);
+    if (cloneMessage.type === 'image') {
+        cloneMessage.content = null;
+    }
+
     if (privateMessageList.length > 0) {
         for (var x in privateMessageList) {
             if (privateMessageList[x].friend === newMessage.receiver) {
                 privateMessageList[x].message.push(newMessage);
                 findIt = true;
-                // save data to local
-                readPrivateChatHistory(newMessage.receiver, function(records) {
-                    for (var x in records) {
-                        console.log(newMessage.receiver + ' save id: ' + currentSaveId[newMessage.receiver]);
-                        if (records[x].saveId == currentSaveId[newMessage.receiver]) {
-                            records[x].message.push(newMessage);
-                            savePrivateChatToLocal(newMessage.receiver, records)
-                            break;
-                        }
-                    }
-                });
                 break;
             }
         }
@@ -3240,36 +3326,49 @@ function saveSendRecord(newMessage) {
             message: info
         };
         privateMessageList.push(newprivateMessageList);
-        // save data to local
-        readPrivateChatHistory(newMessage.receiver, function(records) {
-            var cloneInfo = [];
-            cloneInfo.push(newMessage);
-            if (records === null) { //if there is no chat record for this user in local
-                var saveMessage = [];
-                var info = {
-                    saveId: '0',
-                    message: cloneInfo
-                }
-                currentSaveId[newMessage.receiver] = 0;
-                console.log(newMessage.receiver + ' save id: ' + currentSaveId[newMessage.receiver]);
-                saveMessage.push(info);
-                savePrivateChatToLocal(newMessage.receiver, saveMessage);
-            } else {
-                currentSaveId[newMessage.receiver] = records.length;
-                console.log(newMessage.receiver + ' save id: ' + currentSaveId[newMessage.receiver]);
-                var info = {
-                    saveId: currentSaveId[newMessage.receiver],
-                    message: cloneInfo
-                }
-                records.push(info);
-                savePrivateChatToLocal(newMessage.receiver, records);
-            }
-        });
     }
+    // save data to local
+    readPrivateChatHistory(newMessage.receiver, function(records) {
+        var cloneInfo;
+        var oldLength = 0;
+        if (records == null) {
+            cloneInfo = [];
+        } else {
+            cloneInfo = records;
+            if (typeof currentHistoryId[newMessage.receiver] != 'undefined') {
+                oldLength = currentHistoryId[newMessage.receiver];
+            } else {
+                oldLength = records.length;
+            }
+        }
+        cloneInfo.push(cloneMessage);
+        var saved = false;
+
+        while (!saved) {
+            savePrivateChatToLocal(newMessage.receiver, cloneInfo, function(result) {
+                if (result === 'success') {
+                    saved = true;
+                    currentHistoryId[newMessage.receiver] = oldLength; //initializeing currentHistoryId for receiver
+                    return;
+                } else { //if disk is full, remove the first one data
+                    cloneInfo.shift();
+                    oldLength--;
+                    if (cloneInfo.length === 0) {
+                        currentHistoryId[newMessage.receiver] = 0;
+                        return;
+                    }
+                }
+            })
+        }
+    })
 };
 
 function savePublicSendRecord(newMessage) {
     var findIt = false;
+    var cloneMessage = $.extend({}, newMessage);
+    if (cloneMessage.type === 'image') {
+        cloneMessage.content = null;
+    }
     if (publicMessageList.length > 0) {
         for (var x in publicMessageList) {
             if (publicMessageList[x].group === newMessage.group) {
@@ -3278,16 +3377,6 @@ function savePublicSendRecord(newMessage) {
                 break;
             }
         }
-        // save data to local
-        readPublicChatHistory(newMessage.group, function(records) {
-            for (var x in records) {
-                if (records[x].saveId == currentGroupSaveId[newMessage.group]) {
-                    records[x].message.push(newMessage);
-                    savePublicChatToLocal(newMessage.group, records);
-                    break;
-                }
-            }
-        });
     }
     if (publicMessageList.length <= 0 || !findIt) {
         var info = [];
@@ -3298,37 +3387,52 @@ function savePublicSendRecord(newMessage) {
             message: info
         };
         publicMessageList.push(newPublicMessageList);
-        // save data to local
-        readPublicChatHistory(newMessage.group, function(records) {
-            var cloneInfo = [];
-            cloneInfo.push(newMessage);
-            if (records === null) { //if there is no chat record for this user in local
-                var saveMessage = [];
-                var info = {
-                    saveId: '0',
-                    message: cloneInfo
-                }
-                currentGroupSaveId[newMessage.group] = 0; //initialize group save id
-                saveMessage.push(info);
-                savePublicChatToLocal(newMessage.group, saveMessage);
-            } else {
-                currentGroupSaveId[newMessage.group] = records.length; //current group save id equal the latest group save id plus 1
-                var info = {
-                    saveId: currentGroupSaveId[newMessage.group],
-                    message: cloneInfo
-                }
-                records.push(info);
-                savePublicChatToLocal(newMessage.group, records);
-            }
-        });
     }
+    // save data to local
+    readPublicChatHistory(newMessage.group, function(records) {
+        var cloneInfo;
+        var oldLength = 0;
+        if (records == null) {
+            cloneInfo = [];
+        } else {
+            cloneInfo = records;
+            if (typeof currentHistoryId[newMessage.group] != 'undefined') {
+                oldLength = currentHistoryId[newMessage.group];
+            } else {
+                oldLength = records.length;
+            }
+        }
+        cloneInfo.push(cloneMessage);
+        var saved = false;
+
+        while (!saved) {
+            savePublicChatToLocal(newMessage.group, cloneInfo, function(result) {
+                //console.log('save data successfully: ' + result);
+                if (result === 'success') {
+                    currentHistoryId[newMessage.group] = oldLength;
+                    saved = true;
+                    return;
+                } else {
+                    cloneInfo.shift();
+                    oldLength--;
+                    if (cloneInfo.length === 0) {
+                        currentHistoryId[newMessage.group] = 0;
+                        return;
+                    }
+                }
+            })
+        }
+    });
 };
 
 function saveReceiveRecord(message) {
     var findIt = false;
     var sender = getPersonalInfo(message.sender);
     var note;
-
+    var cloneMessage = $.extend({}, message)
+    if (cloneMessage.type === 'image') {
+        cloneMessage.content = null;
+    }
     if (message.type === 'text') {
         note = sender.profile.first_name + ' ' + sender.profile.last_name + ' ' + 'sent a message to you at ' + message.date.hour + ':' + message.date.minute;
     } else if (message.type === 'image') {
@@ -3352,16 +3456,6 @@ function saveReceiveRecord(message) {
                 }
                 findIt = true;
                 if (privateMessageList[x].count) $('#' + message.sender + 'Div').find('.new-message').html(privateMessageList[x].count);
-                // save data to local
-                readPrivateChatHistory(message.sender, function(records) {
-                    for (var x in records) {
-                        if (records[x].saveId == currentSaveId[message.sender]) {
-                            records[x].message.push(message);
-                            savePrivateChatToLocal(message.sender, records)
-                            break;
-                        }
-                    }
-                });
                 break;
             }
         }
@@ -3388,36 +3482,51 @@ function saveReceiveRecord(message) {
             notificationList.push(newNoteList);
         }
         if (message.sender != interlocutor) $('#' + message.sender + 'Div').find('.new-message').html('1');
-        // save data to local
-        readPrivateChatHistory(message.sender, function(records) {
-            var cloneInfo = [];
-            cloneInfo.push(message);
-            if (records === null) { //if there is no chat record for this user in local
-                var saveMessage = [];
-                var info = {
-                    saveId: '0',
-                    message: cloneInfo
-                }
-                currentSaveId[message.sender] = 0;
-                saveMessage.push(info);
-                savePrivateChatToLocal(message.sender, saveMessage);
-            } else {
-                currentSaveId[message.sender] = records.length;
-                var info = {
-                    saveId: currentSaveId[message.sender],
-                    message: cloneInfo
-                }
-                records.push(info);
-                savePrivateChatToLocal(message.sender, records);
-            }
-        });
+
     }
+    // save data to local
+    readPrivateChatHistory(message.sender, function(records) {
+        var cloneInfo;
+        var oldLength = 0;
+        if (records == null) {
+            cloneInfo = [];
+        } else {
+            cloneInfo = records;
+            if (typeof currentHistoryId[message.sender] != 'undefined') {
+                oldLength = currentHistoryId[message.sender];
+            } else {
+                oldLength = records.length;
+            }
+        }
+        cloneInfo.push(cloneMessage);
+        var saved = false;
+
+        while (!saved) {
+            savePrivateChatToLocal(message.sender, cloneInfo, function(result) {
+                console.log('save result: ' + result);
+                if (result === 'success') {
+                    currentHistoryId[message.sender] = oldLength;
+                    saved = true;
+                    return;
+                } else {
+                    cloneInfo.shift();
+                    oldLength--;
+                    if (cloneInfo.length === 0) {
+                        currentHistoryId[message.sender] = 0;
+                        return;
+                    }
+                }
+            })
+        }
+    });
 };
 
 function savePublicReceiveRecord(message) {
     var findIt = false;
     senderName = message.senderName;
     var note;
+    var cloneMessage = $.extend({}, message);
+    if (cloneMessage.type === 'image') cloneMessage.content = null;
 
     if (message.type === 'text' || message.type === 'group_text') {
         note = senderName + ' ' + 'sent a message to you at ' + message.date.hour + ':' + message.date.minute + ' in group ' + message.group;
@@ -3442,16 +3551,7 @@ function savePublicReceiveRecord(message) {
                 }
                 findIt = true;
                 if (publicMessageList[x].count) $('#' + message.group.replace(/\s/g, '') + 'Div').find('.new-message').html(publicMessageList[x].count);
-                // save data to local
-                readPublicChatHistory(message.group, function(records) {
-                    for (var x in records) {
-                        if (records[x].saveId == currentGroupSaveId[message.group]) {
-                            records[x].message.push(message);
-                            savePublicChatToLocal(message.group, records);
-                            break;
-                        }
-                    }
-                });
+
                 break;
             }
         }
@@ -3477,39 +3577,67 @@ function savePublicReceiveRecord(message) {
             notificationList.push(newNoteList);
         }
         if (message.group != currentGroup) $('#' + message.group.replace(/\s/g, '') + 'Div').find('.new-message').html('1');
-        // save data to local
-        readPublicChatHistory(message.group, function(records) {
-            var cloneInfo = [];
-            cloneInfo.push(message);
-            if (records === null) { //if there is no chat record for this user in local
-                var saveMessage = [];
-                var info = {
-                    saveId: '0',
-                    message: cloneInfo
-                }
-                currentGroupSaveId[message.group] = 0;
-                saveMessage.push(info);
-                savePublicChatToLocal(message.group, saveMessage);
-            } else {
-                currentGroupSaveId[message.group] = records.length;
-                var info = {
-                    saveId: currentGroupSaveId[message.group],
-                    message: cloneInfo
-                }
-                records.push(info);
-                savePublicChatToLocal(message.group, records);
-            }
-        });
+
     }
+    // save data to local
+    readPublicChatHistory(message.group, function(records) {
+        var cloneInfo;
+        var oldLength = 0;
+        if (records == null) {
+            cloneInfo = [];
+        } else {
+            cloneInfo = records;
+            if (typeof currentHistoryId[message.group] != 'undefined') { //if it is not the first time to save data in chat beginning
+                oldLength = currentHistoryId[message.group];
+            } else { //first time to save data in chat beginning
+                oldLength = records.length;
+            }
+        }
+        cloneInfo.push(cloneMessage);
+        var saved = false;
+        while (!saved) {
+            savePublicChatToLocal(message.group, cloneInfo, function(result) {
+                // console.log('save data successfully: ' + result);
+                if (result === 'success') {
+                    saved = true;
+                    currentHistoryId[message.group] = oldLength;
+                    return;
+                } else {
+                    cloneInfo.shift();
+                    oldLength--;
+                    if (cloneInfo.length === 0) {
+                        currentHistoryId[message.group] = 0;
+                        return;
+                    }
+                }
+            })
+        }
+    });
 };
 
 function displaySendMessage(newMessage) {
+
+    var messageDate = null;
+    var newHistoryDate;
+    if (currentDate === null) {
+        currentDate = newMessage.date.day + '-' + newMessage.date.month + '-' + newMessage.date.year;
+        messageDate = currentDate;
+    } else {
+        newHistoryDate = newMessage.date.day + '-' + newMessage.date.month + '-' + newMessage.date.year;
+        if (newHistoryDate == currentDate) {
+            messageDate = null;
+        } else {
+            currentDate = newHistoryDate;
+            messageDate = newHistoryDate;
+        }
+    }
     var chatItem;
-    chatItem = $('<li class="chat-item left"></li>');
+    chatItem = $('<li class="chat-item right"></li>');
     var dateDiv = $('<div class = "send-date"></div>');
-    dateDiv.html(newMessage.date.day + '-' + newMessage.date.month + '-' + newMessage.date.year);
+    if (messageDate != null)
+        dateDiv.html(messageDate);
     chatItem.append(dateDiv);
-    var chatDiv = $('<div class ="avatar-info-left"></div>');
+    var chatDiv = $('<div class ="avatar-info-right"></div>');
     chatItem.append(chatDiv);
     var senderAvatar = $('<img class="chat-avatar">');
     senderAvatar.attr('src', user.profile.avatar);
@@ -3525,7 +3653,7 @@ function displaySendMessage(newMessage) {
         var imgLink = $('<a href = "#"></a>');
         imgLink.attr('id', user.username + newMessage.date.time + newMessage.date.day + newMessage.date.month + newMessage.date.year);
         imgDiv.append(imgLink);
-        var imgTag = $('<img class = "image-frame-left">');
+        var imgTag = $('<img class = "image-frame-right">');
         if (newMessage.content === null)
             imgTag.attr('src', 'img/no-image.jpg');
         else
@@ -3562,7 +3690,7 @@ function displaySendMessage(newMessage) {
             chatContent.append(fileLink);
         }
         contentDiv.append(chatContent);
-        var symbol = $('<span class="cell cell-5"></span>');
+        var symbol = $('<span class="cell cell-7"></span>');
         contentDiv.append(symbol);
     }
     chatItem.appendTo($('#chatList'));
@@ -3626,9 +3754,9 @@ function sendMessage(textField) {
 };
 
 function displayReceiveMessage(message) {
-
     var sender = getPersonalInfo(message.sender);
     var chatItem, hint;
+
     if (message.sender != interlocutor) {
         $('#noteMsg').css('color', 'yellow');
         $('#notificationCount').html(count);
@@ -3640,11 +3768,26 @@ function displayReceiveMessage(message) {
         $('#' + message.sender + 'Div').find('.latest-message').html(hint);
 
     } else {
-        chatItem = $('<li class="chat-item right"></li>');
+        var messageDate = null;
+        var newHistoryDate;
+        if (currentDate == null) {
+            currentDate = message.date.day + '-' + message.date.month + '-' + message.date.year;
+            messageDate = currentDate;
+        } else {
+            newHistoryDate = message.date.day + '-' + message.date.month + '-' + message.date.year;
+            if (newHistoryDate == currentDate) {
+                messageDate = null;
+            } else {
+                currentDate = newHistoryDate;
+                messageDate = newHistoryDate;
+            }
+        }
+        chatItem = $('<li class="chat-item left"></li>');
         var dateDiv = $('<div class = "send-date"></div>');
-        dateDiv.html(message.date.day + '-' + message.date.month + '-' + message.date.year);
+        if (messageDate)
+            dateDiv.html(messageDate);
         chatItem.append(dateDiv);
-        var chatDiv = $('<div class ="avatar-info-right"></div>');
+        var chatDiv = $('<div class ="avatar-info-left"></div>');
         chatItem.append(chatDiv);
         var senderAvatar = $('<img class="chat-avatar">');
         senderAvatar.attr('src', sender.profile.avatar);
@@ -3654,12 +3797,11 @@ function displayReceiveMessage(message) {
         timeDiv.html(time);
         chatDiv.append(timeDiv);
         if (message.type === 'image') {
-
             var imgDiv = $('<div></div>');
             var imgLink = $('<a href = "#"></a>');
             imgLink.attr('id', sender.username + message.date.time + message.date.day + message.date.month + message.date.year);
             imgDiv.append(imgLink);
-            var imgTag = $('<img class = "image-frame-right">');
+            var imgTag = $('<img class = "image-frame-left">');
             if (message.content === null) {
                 imgTag.attr('src', 'img/no-image.jpg');
             } else {
@@ -3689,14 +3831,11 @@ function displayReceiveMessage(message) {
                 preText.append(fileLink);
                 chatContent.append(preText);
             }
-
             contentDiv.append(chatContent);
-            var symbol = $('<span class="cell cell-7"></span>');
+            var symbol = $('<span class="cell cell-5"></span>');
             contentDiv.append(symbol);
         }
-
         $('#chatList').append(chatItem);
-        //$('#chatWrapper').scrollTop($('#chatList li').last().position().top + $('#chatList li').last().height());
         updateScroll();
     }
 };
@@ -3732,11 +3871,26 @@ function displayReceiveMsg(message, sender) {
         $('#' + message.group.replace(/\s/g, '') + 'Div').find('.latest-message').html(hint);
 
     } else {
-        chatItem = $('<li class="chat-item right"></li>');
+        var messageDate = null;
+        var newHistoryDate;
+        if (currentDate == null) {
+            currentDate = message.date.day + '-' + message.date.month + '-' + message.date.year;
+            messageDate = currentDate;
+        } else {
+            newHistoryDate = message.date.day + '-' + message.date.month + '-' + message.date.year;
+            if (newHistoryDate == currentDate) {
+                messageDate = null;
+            } else {
+                currentDate = newHistoryDate;
+                messageDate = newHistoryDate;
+            }
+        }
+        chatItem = $('<li class="chat-item left"></li>');
         var dateDiv = $('<div class = "send-date"></div>');
-        dateDiv.html(message.date.day + '-' + message.date.month + '-' + message.date.year);
+        if (messageDate)
+            dateDiv.html(messageDate);
         chatItem.append(dateDiv);
-        var chatDiv = $('<div class ="avatar-info-right"></div>');
+        var chatDiv = $('<div class ="avatar-info-left"></div>');
         chatItem.append(chatDiv);
         var senderAvatar = $('<img class="chat-avatar">');
         senderAvatar.attr('src', sender.profile.avatar);
@@ -3745,13 +3899,15 @@ function displayReceiveMsg(message, sender) {
         var time = message.date.hour + ':' + message.date.minute;
         timeDiv.html(time);
         chatDiv.append(timeDiv);
+        var senderDiv = $('<div class = "group-sender-name"></div>');
+        senderDiv.html(sender.profile.first_name + ' ' + sender.profile.last_name);
+        chatItem.append(senderDiv);
         if (message.type === 'image') {
-
             var imgDiv = $('<div></div>');
             var imgLink = $('<a href = "#"></a>');
             imgLink.attr('id', sender.username + message.date.time + message.date.day + message.date.month + message.date.year);
             imgDiv.append(imgLink);
-            var imgTag = $('<img class = "image-frame-right">');
+            var imgTag = $('<img class = "image-frame-left">');
             if (message.content === null) imgTag.attr('src', 'img/no-image.jpg');
             else imgTag.attr('src', message.content);
             imgLink.append(imgTag);
@@ -3761,8 +3917,12 @@ function displayReceiveMsg(message, sender) {
             var contentDiv = $('<div class="bubble-item"></div>');
             if (sender.profile.gender === 'Female') {
                 contentDiv.addClass('bubble-parrot-red');
+                //contentDiv.addClass('group-messge-display');
+
             } else {
                 contentDiv.addClass('bubble-parrot-yellow');
+                //contentDiv.addClass('group-messge-display');
+
             }
 
             chatItem.append(contentDiv);
@@ -3780,7 +3940,7 @@ function displayReceiveMsg(message, sender) {
             }
 
             contentDiv.append(chatContent);
-            var symbol = $('<span class="cell cell-7"></span>');
+            var symbol = $('<span class="cell cell-5"></span>');
             contentDiv.append(symbol);
         }
 
@@ -3794,7 +3954,7 @@ function displayReceiveMsg(message, sender) {
 function exitProfile() {
     $('#totalDiv').remove();
     $('#response').remove();
-    location.reload();
+    //location.reload();
 };
 
 function logout() {
@@ -4020,6 +4180,9 @@ function replaceURLWithHTMLLinks(text) {
 
 function selectGroupAvatar(newGroupName) {
     var avatarUploadDiv = $('<div class = "form-group row avatar-upload-form"></div>');
+    var groupNameDiv = $('<div id = "groupName" class = "hide"></div>');
+    groupNameDiv.html(newGroupName);
+    avatarUploadDiv.append(groupNameDiv);
     var title = $('<h5 class="group-avatar-title"></h5>');
     title.html('Please select an avatar for new group ' + newGroupName);
     avatarUploadDiv.append(title);
@@ -4039,9 +4202,6 @@ function selectGroupAvatar(newGroupName) {
     actionDiv.append(confirmBtn);
     var cancelDiv = $('<div class = "cancel-group-avatar"><button class = "btn btn-danger"><a href="#"><i class = "fa fa-times fa-2x"></i></a></button></div>')
     actionDiv.append(cancelDiv);
-    var groupNameDiv = $('<div id = "groupName" class = "hide"></div>');
-    groupNameDiv.html(newGroupName);
-    avatarUploadDiv.append(groupNameDiv);
     var total = $('<div class = "total"></div>');
     total.append(avatarUploadDiv);
     $('body').append(total);
