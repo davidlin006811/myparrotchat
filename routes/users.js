@@ -71,7 +71,6 @@ router.post('/register', function(req, res) {
                         var username = user.username;
                         var verify_code = user.verify_code;
                         var randomVerifyCode = URLSafeBase64.encode(new Buffer(verify_code, 'base64')); //encode verify_code so that it can be put inside an url
-                        //var link = "http://66.228.39.175/user/verify?id=" + userid + "&" + "user=" + username + "&" + "verifycode=" + randomVerifyCode;
                         var link = "https://www.myparrotchat.com/user/verify?id=" + userid + "&" + "user=" + username + "&" + "verifycode=" + randomVerifyCode;
                         var subject = "Please confirm your Email account";
                         var content = "Dear " + user.username + ",<br> Please click on the following link to verify your email within 24 hours. This link will be invalid after 24 hours. This message comes from https://www.myparrotchat.com<br><a href=" + link + ">Click here to verify</a>";
@@ -188,13 +187,11 @@ router.post('/sendFile', function(req, res) {
         sender = fields.sender;
         groupName = fields.groupName;
         receiver = fields.receiver;
-
         res.send('success');
     });
 
     form.on('fileBegin', function(name, file) {
-        //file.path = '/root/chat/uploads/' + file.name;
-        file.path = '/node/uploads/' + file.name;
+        file.path = '/Your File Path' + file.name;
         fileName = file.name;
         filePath = file.path;
 
@@ -280,8 +277,7 @@ router.post('/sendFile', function(req, res) {
 });
 router.get('/download', function(req, res) {
     var fileName = req.query.file;
-    //var filePath = '/root/chat/uploads/' + fileName;
-    var filePath = '/node/uploads/' + fileName;
+    var filePath = '/Your File Path' + fileName;    //fill your file path
     try {
         res.download(filePath);
     } catch (e) {
