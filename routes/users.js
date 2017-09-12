@@ -12,6 +12,7 @@ var Token = require('../models/token');
 var formidable = require('formidable');
 var users = {}; //it is used to store socket information
 var groups = [];
+
 // get the name of every group
 Group.getAllGroupNames(function(err, names) {
     groups = names;
@@ -70,9 +71,10 @@ router.post('/register', function(req, res) {
                         var username = user.username;
                         var verify_code = user.verify_code;
                         var randomVerifyCode = URLSafeBase64.encode(new Buffer(verify_code, 'base64')); //encode verify_code so that it can be put inside an url
-                        var link = "http://66.228.39.175/user/verify?id=" + userid + "&" + "user=" + username + "&" + "verifycode=" + randomVerifyCode;
+                        //var link = "http://66.228.39.175/user/verify?id=" + userid + "&" + "user=" + username + "&" + "verifycode=" + randomVerifyCode;
+                        var link = "https://www.myparrotchat.com/user/verify?id=" + userid + "&" + "user=" + username + "&" + "verifycode=" + randomVerifyCode;
                         var subject = "Please confirm your Email account";
-                        var content = "Dear " + user.username + ",<br> Please Click on the link to verify your email within 24 hours. This link will be invalid after 24 hours.<br><a href=" + link + ">Click here to verify</a>";
+                        var content = "Dear " + user.username + ",<br> Please click on the following link to verify your email within 24 hours. This link will be invalid after 24 hours. This message comes from https://www.myparrotchat.com<br><a href=" + link + ">Click here to verify</a>";
                         var url = "/send?name=" + user.username + "&" + "email=" + user.email;
                         Email.sendEmail(user.email, subject, content, url, res);
                     })
@@ -144,9 +146,10 @@ router.post('/request_password', function(req, res) {
             return res.redirect('/forget_password');
         } else {
             var randomRequestCode = URLSafeBase64.encode(new Buffer(requestCode, 'base64')); //encode requestCode  so that it can be put inside an url
-            var link = "http://66.228.39.175/reset_password?id=" + user._id + "&" + "resetcode=" + randomRequestCode;
+            //var link = "http://66.228.39.175/reset_password?id=" + user._id + "&" + "resetcode=" + randomRequestCode;
+            var link = "https://www.myparrotchat.com/reset_password?id=" + user._id + "&" + "resetcode=" + randomRequestCode;
             var subject = "Reset your Parrot password";
-            var content = "Hello " + user.username + ",<br> Please Click on the link to reset your password.<br><a href=" + link + ">Click here to reset your password</a>"
+            var content = "Hello " + user.username + ",<br> Please click on the following link to reset your password. This message comes from https://www.myparrotchat.com<br><a href=" + link + ">Click here to reset your password</a>"
             var url = "/sendresetpassword?name=" + user.username + "&" + "email=" + user.email;
             Email.sendEmail(user.email, subject, content, url, res);
         }
@@ -168,33 +171,7 @@ router.post('/resetpassword', function(req, res) {
     })
 
 });
-router.post('/saveProfile', function(req, res) {
-    var id = req.body.userId;
-    var first_name = req.body.firstname;
-    var last_name = req.body.lastname;
-    var gender = req.body.gender;
-    var city = req.body.city;
-    var province = req.body.province;
-    var postal_code = req.body.postalcode;
-    var country_code = req.body.country;
 
-    var profile = {
-        first_name: first_name,
-        last_name: last_name,
-        gender: gender,
-        location: {
-            city: city,
-            province: province,
-            postal_code: postal_code,
-            country_code: country_code
-        }
-    };
-    User.updateProfile(id, profile, function(err, user) {
-        if (err) throw err;
-        var updateProfile = user.profile;
-        res.send(updateProfile);
-    })
-});
 router.post('/changePassword', function(req, res) {
     var id = req.body.userId;
     var old_password = req.body.oldpassword;
@@ -204,18 +181,20 @@ router.post('/changePassword', function(req, res) {
     })
 });
 router.post('/sendFile', function(req, res) {
-    var sender, receiver, fileName, filePath, groupName;
+    var sender, receiver, fileName, filePath, groupName, senderName;
 
     var form = new formidable.IncomingForm();
     form.parse(req, function(err, fields, files) {
         sender = fields.sender;
         groupName = fields.groupName;
         receiver = fields.receiver;
+
         res.send('success');
     });
 
     form.on('fileBegin', function(name, file) {
-        file.path = '/root/chat/uploads/' + file.name;
+        //file.path = '/root/chat/uploads/' + file.name;
+        file.path = '/node/uploads/' + file.name;
         fileName = file.name;
         filePath = file.path;
 
@@ -301,10 +280,56 @@ router.post('/sendFile', function(req, res) {
 });
 router.get('/download', function(req, res) {
     var fileName = req.query.file;
-    var filePath = '/root/chat/uploads/' + fileName;
-    res.download(filePath);
+    //var filePath = '/root/chat/uploads/' + fileName;
+    var filePath = '/node/uploads/' + fileName;
+    try {
+        res.download(filePath);
+    } catch (e) {
+        console.log(e);
+    }
+
 });
 
+function retrieveOfflineMessages(user) {
+    if (user.offlineMessages.length) {
+        for (var j in user.offlineMessages) {
+            switch (user.offlineMessages[j].type) {
+                case "text":
+                    users[user.username].emit('new message', user.offlineMessages[j]);
+                    break;
+                case "file":
+                    users[user.username].emit('new message', user.offlineMessages[j]);
+                    break;
+                case "invitePeople":
+                    users[user.username].emit('be a friend request', user.offlineMessages[j]);
+                    break;
+                case "acceptRequest":
+                    users[user.username].emit('new offline conection', user.offlineMessages[j]);
+                    break;
+                case "rejectRequest":
+                    users[user.username].emit('request is rejected', user.offlineMessages[j]);
+                    break;
+                case "removeFriend":
+                    users[user.username].emit('remove friend please', user.offlineMessages[j].sender);
+                    break;
+                case "inviteJoiningGroup":
+                    users[user.username].emit('invite joining group', user.offlineMessages[j]);
+                    break;
+                case "removeGroup":
+                    users[user.username].emit('group was removed', user.offlineMessages[j]);
+                    break;
+                case "group_text":
+                    user.offlineMessages[j].type = 'text';
+                    users[user.username].emit('new group message', user.offlineMessages[j]);
+                    break;
+                case "group_file":
+                    users[user.username].emit('new group message', user.offlineMessages[j]);
+                    break;
+            }
+        }
+        User.removeOfflineMessages(user.username);
+    }
+}
 io.on('connection', function(socket) {
 
     socket.on('new user', function(data, callback) {
@@ -324,7 +349,7 @@ io.on('connection', function(socket) {
                     })
                 }
                 var relation = {};
-                if (!user.friends.length) return;
+                if (!user.friends.length) retrieveOfflineMessages(user);
                 let count = 0;
                 //get friends' information
                 for (let i = 0; i < user.friends.length; i++) {
@@ -336,6 +361,7 @@ io.on('connection', function(socket) {
                     User.getUserByUsername(friend.username, function(err, friendData) {
                         var online = false;
                         if (err) return;
+
                         if (friendData.username in users) {
                             online = true;
                             var onlineMessage = {
@@ -362,46 +388,9 @@ io.on('connection', function(socket) {
                         count++;
 
                         // if all friends'information has been sent 
-                        if (count >= (user.friends.length)) {
+                        if (count >= (user.friends.length) || user.friends.length == 0) {
                             //get and submit offlineMessages
-                            if (user.offlineMessages.length) {
-                                for (var j in user.offlineMessages) {
-                                    switch (user.offlineMessages[j].type) {
-                                        case "text":
-                                            users[user.username].emit('new message', user.offlineMessages[j]);
-                                            break;
-                                        case "file":
-                                            users[user.username].emit('new message', user.offlineMessages[j]);
-                                            break;
-                                        case "invitePeople":
-                                            users[user.username].emit('be a friend request', user.offlineMessages[j]);
-                                            break;
-                                        case "acceptRequest":
-                                            users[user.username].emit('new offline conection', user.offlineMessages[j]);
-                                            break;
-                                        case "rejectRequest":
-                                            users[user.username].emit('request is rejected', user.offlineMessages[j]);
-                                            break;
-                                        case "removeFriend":
-                                            users[user.username].emit('remove friend please', user.offlineMessages[j].sender);
-                                            break;
-                                        case "inviteJoiningGroup":
-                                            users[user.username].emit('invite joining group', user.offlineMessages[j]);
-                                            break;
-                                        case "removeGroup":
-                                            users[user.username].emit('group was removed', user.offlineMessages[j]);
-                                            break;
-                                        case "group_text":
-                                            user.offlineMessages[j].type = 'text';
-                                            users[user.username].emit('new group message', user.offlineMessages[j]);
-                                            break;
-                                        case "group_file":
-                                            users[user.username].emit('new group message', user.offlineMessages[j]);
-                                            break;
-                                    }
-                                }
-                                User.removeOfflineMessages(user.username);
-                            }
+                            retrieveOfflineMessages(user);
                         }
                     });
                 }
@@ -424,6 +413,33 @@ io.on('connection', function(socket) {
                 location: user.profile.location.city + " " + user.profile.location.province + " " + user.profile.location.country_code
             }
             return callback(target);
+        })
+    });
+    socket.on('saveProfile', function(message, callback) {
+        var id = message.userId;
+        var first_name = message.first_name;
+        var last_name = message.last_name;
+        var gender = message.gender;
+        var city = message.city;
+        var province = message.province;
+        var postal_code = message.postal_code;
+        var country_code = message.country;
+
+        var profile = {
+            first_name: first_name,
+            last_name: last_name,
+            gender: gender,
+            location: {
+                city: city,
+                province: province,
+                postal_code: postal_code,
+                country_code: country_code
+            }
+        };
+        User.updateProfile(id, profile, function(err, user) {
+            if (err) throw err;
+            var updateProfile = user.profile;
+            callback(updateProfile);
         })
     });
     socket.on('search group', function(message, callback) { //return max 10 results
@@ -573,6 +589,9 @@ io.on('connection', function(socket) {
             if (group === 'no group') {
                 return users[member].emit('no group');
             }
+            if (group === 'be a member already') {
+                return users[member].emit('be a member already', groupName);
+            }
             User.addGroup(member, groupName, function(err, user) {
                 users[user.username].emit('new group', group);
             });
@@ -590,6 +609,8 @@ io.on('connection', function(socket) {
         };
         User.addPotentialConnection(message.inviter, newFriend, function(err, user) {
             if (err) callback(err);
+            if (user == 'be friend already') return callback('be friend already');
+            else if (user == 'repeat request') return callback('repeat request');
             else {
                 var invitee = message.invitee;
                 var inviter = message.inviter;
@@ -763,16 +784,13 @@ io.on('connection', function(socket) {
             users[receiver].emit('typing', message);
         }
     });
-    socket.on('send message', function(message, callback) {
+    socket.on('send message', function(message) {
         var receiver = message.receiver;
         if (receiver in users) {
-            callback(true);
             users[receiver].emit('new message', message);
         } else {
             User.pushOfflineMessage(receiver, message, function(err, user) {
                 if (err) throw err;
-                if (!user) callback(false)
-                else callback(true);
             });
         }
     });
@@ -805,10 +823,8 @@ io.on('connection', function(socket) {
     socket.on('receiver steam ok', function(message) {
         var receiver = message.receiver;
         var sender = message.sender;
-
         users[receiver].emit('add peer', { offer: true, peerId: sender, useVideo: message.useVideo });
         users[sender].emit('add peer', { offer: false, peerId: receiver, useVideo: message.useVideo });
-
     });
     socket.on('request decline', function(message) {
         var receiver = message.receiver;
@@ -840,7 +856,7 @@ io.on('connection', function(socket) {
                 var newGroup = {
                     name: groupName,
                     owner: message.owner,
-                    avatar: null,
+                    avatar: 'img/blank_avatar.svg',
                     members: [message.owner]
                 }
                 Group.newGroup(newGroup, function(err, group) {
@@ -859,9 +875,23 @@ io.on('connection', function(socket) {
         var groupName = message.groupName;
         Group.updateAvatar(groupName, message.avatar, function(err, group) {
             if (err) throw err;
-            users[message.sender].emit('new group', group);
+            for (var i = 0; i < group.members.length; i++) {
+                if (group.members[i] in users) {
+                    users[group.members[i]].emit('new group', group);
+                }
+            }
         })
     });
+    socket.on('new group without avatar', function(message) {
+        var groupName = message.groupName;
+        var sender = message.sender;
+        Group.getGroupByName(groupName, function(err, group) {
+            if (err) throw err;
+            if (sender in users) {
+                users[sender].emit('new group', group);
+            }
+        })
+    })
     socket.on('disconnect media', function(message) {
         var receiver = message.receiver;
         if (receiver in users) {
