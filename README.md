@@ -20,4 +20,4 @@
  - An easy way to create group, remove group, join group, and withdraw from group freely 
  - One to one private chat and one to mutilple group chat
  - A simple way to toggle between deafult input panel and floating input panel
-### [Manual](https://github.com/davidlin006811/myparrotchat/wiki/Home/_edit)
+### [Manual](https://github.com/davidlin006811/myparrotchat/wiki/Home)
