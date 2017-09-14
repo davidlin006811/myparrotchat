@@ -145,7 +145,6 @@ router.post('/request_password', function(req, res) {
             return res.redirect('/forget_password');
         } else {
             var randomRequestCode = URLSafeBase64.encode(new Buffer(requestCode, 'base64')); //encode requestCode  so that it can be put inside an url
-            //var link = "http://66.228.39.175/reset_password?id=" + user._id + "&" + "resetcode=" + randomRequestCode;
             var link = "https://www.myparrotchat.com/reset_password?id=" + user._id + "&" + "resetcode=" + randomRequestCode;
             var subject = "Reset your Parrot password";
             var content = "Hello " + user.username + ",<br> Please click on the following link to reset your password. This message comes from https://www.myparrotchat.com<br><a href=" + link + ">Click here to reset your password</a>"
@@ -194,7 +193,6 @@ router.post('/sendFile', function(req, res) {
         file.path = '/Your File Path' + file.name;
         fileName = file.name;
         filePath = file.path;
-
     });
 
     form.on('end', function() {
@@ -207,7 +205,6 @@ router.post('/sendFile', function(req, res) {
         var minute = sendDate.getMinutes();
         if (parseInt(minute) < 10) {
             minute = '0' + minute.toString();
-
         }
         if (receiver != groupName) {
             var newMessage = {
@@ -271,7 +268,6 @@ router.post('/sendFile', function(req, res) {
                     }
                 })
             })
-
         }
     })
 });
@@ -283,7 +279,6 @@ router.get('/download', function(req, res) {
     } catch (e) {
         console.log(e);
     }
-
 });
 
 function retrieveOfflineMessages(user) {
@@ -390,7 +385,6 @@ io.on('connection', function(socket) {
                         }
                     });
                 }
-
             });
         }
     });
@@ -401,7 +395,6 @@ io.on('connection', function(socket) {
                 var fail = false;
                 return callback(fail);
             }
-
             var target = {
                 name: user.profile.first_name + ' ' + user.profile.last_name,
                 avatar: user.profile.avatar,
@@ -446,7 +439,6 @@ io.on('connection', function(socket) {
         for (let i = 0; i < groups.length; i++) {
             if (count >= 10) {
                 return callback(response);
-
             }
             var length = name.length > 0 ? name.length : 1;
             if (name == groups[i].substring(0, length).toUpperCase()) {
@@ -463,17 +455,14 @@ io.on('connection', function(socket) {
             if (err) throw err;
             if (!group) return users[message.username].emit('no group');
             else {
-
                 var info = {
                     name: group.name,
                     avatar: group.avatar,
                     owner: group.owner,
                     memberCount: group.members.length,
                     members: group.members
-
                 }
                 return users[message.username].emit('group result', info);
-
             }
         })
     });
@@ -550,7 +539,6 @@ io.on('connection', function(socket) {
                     relationship: 'new',
                     online: online
                 }
-
                 membersInfo.push(info);
                 count++;
                 if (count === members.length) {
@@ -626,9 +614,7 @@ io.on('connection', function(socket) {
                     var newMessage = 'You sent an offline message to ' + message.inviteeName + ' to establish a connection successfully';
                     callback(newMessage);
                 })
-
             }
-
         })
     });
     socket.on('invite someone to group', function(message, callback) {
@@ -775,7 +761,6 @@ io.on('connection', function(socket) {
     });
     socket.on('typing', function(message) {
         var receiver = message.receiver;
-
         if (receiver in users) {
             users[receiver].emit('typing', message);
         }
@@ -838,7 +823,6 @@ io.on('connection', function(socket) {
     });
     socket.on('answer', function(message) {
         var receiver = message.receiver;
-
         if (receiver in users) {
             users[receiver].emit('answer', message);
         }
@@ -862,7 +846,6 @@ io.on('connection', function(socket) {
                         groups.push(group.name);
                         callback('success');
                     })
-
                 })
             }
         })
