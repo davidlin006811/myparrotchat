@@ -59,25 +59,15 @@ module.exports.sendEmail = function(email_address, subject, content, url, res) {
         service: 'Gmail',
         auth: {
             type: 'OAuth2',
-            user: 'davidlin006811@@gmail.com',
+            user: 'Your email address',
             clientId: 'Your mailbox client ID',
             clientSecret: 'xxxxxx-xxxxxxxxxxxxxxxxx',
             refreshToken: 'x/xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx_xxxxxxxx'
         },
     });
 
-    /*
-     var smtpTransport = nodemailer.createTransport({
-         service: "gmail",
-
-          
-         auth: {
-             user: "davidlin006811@gmail.com",
-             pass: "Davidlin@@02040019"
-         }
-     });*/
     var mailOptions = {
-        from: 'Sixian Lin<davidlin006811@gmail.com>',
+        from: 'Your email address',
         to: email_address,
         subject: subject,
         html: content
