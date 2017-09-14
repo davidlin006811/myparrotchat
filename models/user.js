@@ -88,8 +88,8 @@ module.exports.getUserById = function(id, callback) {
 module.exports.activateAccount = function(id, verifyCode, callback) {
         User.findById(id, function(err, user) {
             if (err) throw err;
+            if (!user) return callback('No user');
             if (user.activated) {
-
                 return callback('Acount has been activated!');
             } else {
                 var now = new Date();
