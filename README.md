@@ -22,4 +22,6 @@
  - A simple way to toggle between deafult input panel and floating input panel
 ### Compatbility
  This application can run well on Chrome, Firefox and Opera. IE and Edage cannot support this application well, so please avoid using IE or Edge to access this application. This application has not been tested on safari yet, and I will update this information if I get the test result on Safari.
+### Security Issues
+The website https://www.myparrotchat.com uses a self-generated certificate. Most of web broswers treat it as a unsafe website and prevent the users from visiting this website. In fact, this website is ver safe. User authentication and shadow password can prevent illegal login and passowrd cracking. In addition, this website just asks the user to offer the basic information for register, and there is no important information saved on this website. To troubleshoot the security issues, please click [Here](https://github.com/davidlin006811/myparrotchat/wiki/Troubleshooting)
 ### [Manual](https://github.com/davidlin006811/myparrotchat/wiki/Chat-Application-Manual)
