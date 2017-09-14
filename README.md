@@ -21,5 +21,5 @@
  - One to one private chat and one to mutilple group chat
  - A simple way to toggle between deafult input panel and floating input panel
 ### Compatbility
- This application can run well on Chrome, Firefox and Opera. IE and Edage cannot support this application well, so please avoid using IE or Edge to access this application. This application has not been tested on safari yet, and I will update this message if I get the test result on Safari.
+ This application can run well on Chrome, Firefox and Opera. IE and Edage cannot support this application well, so please avoid using IE or Edge to access this application. This application has not been tested on safari yet, and I will update this information if I get the test result on Safari.
 ### [Manual](https://github.com/davidlin006811/myparrotchat/wiki/Chat-Application-Manual)
