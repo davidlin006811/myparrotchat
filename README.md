@@ -27,4 +27,7 @@ The website https://www.myparrotchat.com uses a self-generated certificate. Most
 
 ### Installation
 If you want to run this application on ypur local machine as your chat web server, please follow this [instruction](https://github.com/davidlin006811/myparrotchat/wiki/Installation) step by step. You will never get wrong.
+
+### Panel Illustration
+Please click [here](https://github.com/davidlin006811/myparrotchat/wiki/Illustration)
 ### [Manual](https://github.com/davidlin006811/myparrotchat/wiki/Chat-Application-Manual)
