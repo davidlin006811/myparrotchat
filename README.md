@@ -44,4 +44,4 @@ If you don't like the style of default input and want to use a large multi-line 
 
 4. No image displays in chat history. Because this application uses local storage to save data, and each user has only maximum 10 MB size space on local storage (it depends on which browser you use), so the images would not be saved on local storage. In the next version, data will be save on indexedDB, so that each user could store at least 250 MB data (it depands on the free space of your hard disk). 
 
-### [Manual](https://github.com/davidlin006811/myparrotchat/wiki/Chat-Application-Manual)
+### Manual(To be done)
