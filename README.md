@@ -23,7 +23,7 @@
 ### Compatbility
  This application can run well on Chrome, Firefox and Opera. For Safari browser, if you intend to use video chat, please upgrade Safari to version 11 or install Webrtc plugin in your current Safari browser. IE and Edage cannot support this application well, so please avoid using IE or Edge to access this application. 
 ### Security Issues
-The website https://www.myparrotchat.com uses a self-generated certificate. Most of web broswers treat it as a unsafe website and prevent the users from visiting. In fact, this website is safe. User authentication and shadow password can prevent illegal login and passowrd cracking. In addition, this website only asks users to offer some basic information for register, and there is no important information saved on this website. To troubleshoot the security issues, please click [Here](https://github.com/davidlin006811/myparrotchat/wiki/Troubleshooting)
+The website https://www.myparrotchat.com uses a self-generated certificate. Most of web broswers treat it as a unsafe website and prevent the users from visiting. In fact, this website is safe. User authentication and shadow password can prevent illegal login and passowrd cracking. In addition, this website only asks users to offer some basic information for register, and there is no important private information saved on this website. To troubleshoot the security issues, please click [Here](https://github.com/davidlin006811/myparrotchat/wiki/Troubleshooting)
 
 ### Installation
 If you want to run this application on a local machine as your chat web server, please follow this [instruction](https://github.com/davidlin006811/myparrotchat/wiki/Installation) step by step. You will never get wrong.
