@@ -40,7 +40,7 @@ If you don't like the style of default input panel and want to use a large multi
 
 2. No "Paste" menu appears when right click input field. This is the limitation of all browsers. "Paste" event is a system event that a browser could not simulate. A way will be found to fix this issue in the next version.
 
-3. Emoji icon can only be appended to the end of the string in float textEditor. It is caused by the limitation of HTML and the bug of Emoji plugin. If you need to insert emoji icons in float textEditor, please use CTRL + X and CREL + V or use default input panel. This issue will be fixed in the next version.
+3. Emoji icon can only be appended to the end of the string in float textEditor. It is caused by the limitation of HTML and the bug of Emoji plugin. If you need to insert emoji icons in float textEditor, please use CTRL + X and CREL + V. This issue will be fixed in the next version.
 
 4. No image displays in chat history. Because this application uses local storage to save data, and each user has only maximum 10 MB size space on local storage (it depends on which browser you use), so the images would not be saved on local storage. In the next version, data will be save on indexedDB, so that each user could store at least 250 MB data (it depands on the free space of your hard disk). 
 
