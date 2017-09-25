@@ -31,7 +31,7 @@ If you want to run this application on a local machine as your chat web server, 
 ### [Panel Illustration](https://github.com/davidlin006811/myparrotchat/wiki/Illustration)
 
 
-### [How to find a people](https://github.com/davidlin006811/myparrotchat/wiki/How-to-find-a-user)
+### [How to find a user](https://github.com/davidlin006811/myparrotchat/wiki/How-to-find-a-user)
 
 
 ### [How to find a group](https://github.com/davidlin006811/myparrotchat/wiki/How-to-find-a-group)
