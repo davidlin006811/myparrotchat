@@ -16,7 +16,7 @@
  - Snapshot functionality in video chat
  - Multiple groups
  - Easy user and group search
- - Free contacter adding and removing 
+ - Contacter adding and removing 
  - An easy way to create group, remove group, join group, and withdraw from group freely 
  - One to one private chat and one to mutilple group chat
  - A simple way to toggle between deafult input panel and floating input panel
