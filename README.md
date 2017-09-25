@@ -34,6 +34,9 @@ Please click [here](https://github.com/davidlin006811/myparrotchat/wiki/Illustra
 ### How to find a people
 Please click [here](https://github.com/davidlin006811/myparrotchat/wiki/How-to-find-a-user)
 
+### How to find a group
+Please click [here](https://github.com/davidlin006811/myparrotchat/wiki/How-to-find-a-group)
+
 ### Default Input Panel / Float textEditor Switch
 If you don't like the style of default input panel and want to use a large multi-line input panel, you can right click the default input panel to enable Float textEditor. If Float textEditor is enabled, the functions of default input panel will be disabled so you can not use default input panel. If you want to switch back, please close the Float textEditor. The default input panel will be reenabled and reused.
 
