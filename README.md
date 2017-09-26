@@ -20,7 +20,7 @@
  - Multiple groups
  - Easy user and group search
  - Contact adding and removing 
- - An easy way to create/remove/join group and withdraw from group freely 
+ - An easy way to create/remove/join group and withdraw from group 
  - One to one private chat and one to mutilple group chat
  - A simple way to toggle between deafult input panel and floating input panel
 ### Compatbility
