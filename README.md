@@ -2,7 +2,7 @@
 ![capture3a](https://user-images.githubusercontent.com/22565449/29981355-6a983fca-8f1b-11e7-9994-d98625e55f92.PNG)
 ### A web chat 
 ### A self-hosted chat app built with Node.js framework, Javascript, JQuery, Mongodb, Mongoose, Socket.io, Webrtc, CSS, Bootstrap, JSON, AJAX, HTML and MVC architecture. 
-### Not like Facebook or Twitter, this web application is not a social media, but a communication tool. If you want to find someone, you need to know his username or the group he has joined, not his name. That means someone you want to chat with must be the one you know in reality. It ensures in a way that the chat is safe and will not cause some negative consequence.
+### Not like Facebook or Twitter, this web application is not a social media, but a communication tool. If you want to find someone, you need to know his username or the group he joined, not his name. That means someone you want to chat with must be the one you know in reality. It ensures in a way that the chat is safe and will not cause some negative consequence.
 
 ![chat](https://user-images.githubusercontent.com/22565449/30355367-01f010da-9801-11e7-8df4-980109364792.png)
 
