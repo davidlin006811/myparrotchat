@@ -32,7 +32,7 @@ The website https://www.myparrotchat.com uses a self-generated certificate. Most
 ### [User Register](https://github.com/davidlin006811/myparrotchat/wiki/Register)
 ### [Forget Password](https://github.com/davidlin006811/myparrotchat/wiki/Forget-Password)
 ### [How to find a user](https://github.com/davidlin006811/myparrotchat/wiki/How-to-find-a-user)
-### [How to find a group](https://github.com/davidlin006811/myparrotchat/wiki/How-to-find-a-group)
+### [How to find a group](https://github.com/davidlin006811/myparrotchat/wiki/How-to-find-a-group-&-group-members)
 ### [Video Chat](https://github.com/davidlin006811/myparrotchat/wiki/Video-Chat)
 ### [Chat History Panel](https://github.com/davidlin006811/myparrotchat/wiki/Chat-History-Panel)
 
