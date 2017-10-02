@@ -1,4 +1,4 @@
-# myparrotchat
+# Parrotchat
 ![capture3a](https://user-images.githubusercontent.com/22565449/29981355-6a983fca-8f1b-11e7-9994-d98625e55f92.PNG)
 ### A web chat Application
 ### A self-hosted chat app built with Node.js framework, Javascript, JQuery, Mongodb, Mongoose, Socket.io, Webrtc, CSS, Bootstrap, JSON, AJAX, HTML and MVC architecture. 
