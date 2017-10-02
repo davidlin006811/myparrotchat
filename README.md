@@ -1,9 +1,11 @@
 # myparrotchat
 ![capture3a](https://user-images.githubusercontent.com/22565449/29981355-6a983fca-8f1b-11e7-9994-d98625e55f92.PNG)
-### A web chat 
+### A web chat Application
 ### A self-hosted chat app built with Node.js framework, Javascript, JQuery, Mongodb, Mongoose, Socket.io, Webrtc, CSS, Bootstrap, JSON, AJAX, HTML and MVC architecture. 
 ### This web application is a communication tool, not a social media. If you want to find someone, you need to know his username or the group he joined, not his name. That means someone you want to chat with must be the one you know in reality. It ensures in a way that the chat is safe and will not cause some negative consequence.
-
+### Parrot Chat Desktop Application Download
+#### For windows platform, please click [here](https://drive.google.com/open?id=0B2KT7DA4S8z_RnhnTFZkdVNvdlU).
+#### For Linux platform, please click [here](https://drive.google.com/open?id=0B2KT7DA4S8z_dDd1azBsR1dnVFU).
 ![chat](https://user-images.githubusercontent.com/22565449/30355367-01f010da-9801-11e7-8df4-980109364792.png)
 
 
@@ -23,9 +25,7 @@
  - An easy way to create/remove/join group and withdraw from group 
  - One to one private chat and one to mutilple group chat
  - A simple way to toggle between deafult input panel and floating input panel
-### Parrot Chat Desktop Application Download
-#### For windows system, please click [here](https://drive.google.com/open?id=0B2KT7DA4S8z_RnhnTFZkdVNvdlU).
-#### For Linux system, please click [here](https://drive.google.com/open?id=0B2KT7DA4S8z_dDd1azBsR1dnVFU).
+
 ### Compatbility
  This application can run well on Chrome, Firefox and Opera. IE and Edage cannot support this application well, so please avoid using IE or Edge to access this application. 
 ### Security Issues
