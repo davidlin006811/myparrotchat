@@ -23,7 +23,7 @@
  - An easy way to create/remove/join group and withdraw from group 
  - One to one private chat and one to mutilple group chat
  - A simple way to toggle between deafult input panel and floating input panel
-### Desktop Application
+### Parrot Chat Desktop Application Download
 #### For windows system, please click [here](https://drive.google.com/open?id=0B2KT7DA4S8z_RnhnTFZkdVNvdlU).
 #### For Linux system, please click [here](https://drive.google.com/open?id=0B2KT7DA4S8z_dDd1azBsR1dnVFU).
 ### Compatbility
