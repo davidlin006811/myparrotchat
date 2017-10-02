@@ -24,8 +24,8 @@
  - One to one private chat and one to mutilple group chat
  - A simple way to toggle between deafult input panel and floating input panel
 ### Desktop Application
-    #### For windows system, please click [here](https://drive.google.com/open?id=0B2KT7DA4S8z_RnhnTFZkdVNvdlU).
-    #### For Linux system, please click[here](https://drive.google.com/open?id=0B2KT7DA4S8z_dDd1azBsR1dnVFU).
+#### For windows system, please click [here](https://drive.google.com/open?id=0B2KT7DA4S8z_RnhnTFZkdVNvdlU).
+#### For Linux system, please click [here](https://drive.google.com/open?id=0B2KT7DA4S8z_dDd1azBsR1dnVFU).
 ### Compatbility
  This application can run well on Chrome, Firefox and Opera. IE and Edage cannot support this application well, so please avoid using IE or Edge to access this application. 
 ### Security Issues
